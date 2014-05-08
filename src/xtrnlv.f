@@ -6,7 +6,7 @@
 *
       INCLUDE 'common6.h'
       COMMON/GALAXY/ GMG,RG(3),VG(3),FG(3),FGD(3),TG,
-     &               OMEGA,DISK,A,B,V02,RL2
+     &               OMEGA,DISK,A,B,V02,RL2,GMB,AR,GAM,ZDUM(7)
       REAL*8 XI(3),XIDOT(3),FIRR(3),FREG(3),FD(3),FDR(3)
       SAVE FIRST
       LOGICAL FIRST
@@ -40,6 +40,7 @@
     5     CONTINUE
 *       Quit for pure 3D tidal field (case of full N summation).
           IF (KZ(14).EQ.3) GO TO 40
+*       Note ETIDE is accumulated after each regular step (REGINT/GPUCOR).
       END IF
 *
 *       See whether to include a linearized galactic tidal force.
@@ -61,7 +62,21 @@
 *
 *       Include galaxy point mass term for body #I in differential form.
           IF (GMG.GT.0.0D0) THEN
-              ET = ET + GMG*(1.0/SQRT(RI2) - 1.0/SQRT(RG2))
+              ET = ET + GMG*(1.0/SQRT(RI2+ZDUM(1)**2)
+     &                - 1.0/SQRT(RG2+ZDUM(1)**2))
+          END IF
+*
+*       Check contribution from gamma/eta bulge potential.
+          IF (GMB.GT.0.0D0) THEN
+              IF (GAM.NE.2.0D0) THEN
+                  RRG = 1.0 - (1.0 + AR/SQRT(RG2))**(GAM-2.0)
+                  RRI = 1.0 - (1.0 + AR/SQRT(RI2))**(GAM-2.0)
+                  ET = ET + GMB/(AR*(2.0-GAM))*(RRI-RRG)
+              ELSE
+                  RRG = 1.0 + AR/SQRT(RG2)
+                  RRI = 1.0 + AR/SQRT(RI2)
+                  ET = ET + GMB/AR*LOG(RRG/RRI)
+              ENDIF
           END IF
 *
 *       Add optional Miyamoto disk potential.
@@ -75,12 +90,29 @@
               ET = ET + DISK*(1.0/AZ - 1.0/AZ0)
           END IF
 *
+*       Get radius for flattened halo potential.
+          RGHALO2 = 0.0
+          RIHALO2 = 0.0
+          DO 25 K = 1,2
+               RGHALO2 = RGHALO2 + RG(K)**2
+               RIHALO2 = RIHALO2 + (RG(K) + XI(K))**2
+   25     CONTINUE
+          RGHALO2 = RGHALO2 + (RG(3)/ZDUM(4))**2
+          RIHALO2 = RIHALO2 + ((RG(3) + XI(3))/ZDUM(4))**2
+
 *       Check addition of differential logarithmic potential.
-          IF (V02.GT.0.0D0) THEN
-              RI2 = RI2 + RL2
-              RG2 = RG2 + RL2
-              ET = ET + 0.5*V02*(LOG(RI2) - LOG(RG2))
+          IF (V02.GT.0.0D0.AND.ZDUM(2).EQ.0.0D0) THEN
+              ET = ET + 0.5*V02*(LOG(RIHALO2)-LOG(RGHALO2))
           END IF
+
+*       Check addition of differential NFW potential.
+          IF (ZDUM(2).GT.0.0D0) THEN
+              RGHALO = SQRT(RGHALO2)
+              RIHALO = SQRT(RIHALO2)
+              ET = ET + ZDUM(2)*(LOG(1.0D0+RIHALO/ZDUM(3))/RIHALO
+     &               - LOG(1.0D0+RGHALO/ZDUM(3))/RGHALO)
+          END IF
+
 *       Form the differential potential energy due to tides.
           ET = BODY(I)*ET
       END IF

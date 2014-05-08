@@ -42,7 +42,7 @@ c      DATA  G1,G2,G3,G4  /0.28,1.14,0.010,0.1/
               UM = BODY10
               ZM = IMFBD(XX,LM,UM)
           END IF
-*       Include possibility of setting non-MS types.
+*       Include possibility of setting non-MS types. 
           KSTAR(I) = 1
 *
 *       See whether the mass falls within the specified range.

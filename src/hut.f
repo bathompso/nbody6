@@ -108,7 +108,7 @@
 
         implicit real*8 (A-H,M,O-Z)
 	real*8 u(3),udot(3)
-	common/spins/angmom0,rg2(2),m21,r21,semi0,C1,C2,C3,C4,semi
+	common/spins/angmom0,rg2(2),m21,r21,semi0,C1,C2,C3,C4,C5,semi
 *       SAVE IC
 *       DATA IC /0/
 

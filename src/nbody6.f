@@ -28,6 +28,28 @@
       INCLUDE 'common6.h'
       EXTERNAL MERGE
 *
+*       Read-in from specified input file
+      character*80 dname,fname,ddir
+      integer ld,ldd
+      common /fnm/ ld,ldd,dname,ddir
+      real*8 td,drr
+
+      read(*,*) dname
+      do i = len(dname),1,-1
+          if (dname(i:i).ne.' ') goto 777
+      end do
+ 777  ld = i
+
+      ddir=''
+      do i = len(ddir),1,-1
+          if (ddir(i:i).ne.' ') goto 776
+      end do
+ 776  ldd = i
+
+      write(*,'(/a,a)') 'Reading input parameters from: ',
+     *    dname(1:ld)//'.PAR'
+      open(5,file=dname(1:ld)//'.PAR')
+*
 *
 *       Initialize the timers.
       CALL CPUTIM(CPU0)
@@ -38,11 +60,22 @@
 *
       IF (KSTART.EQ.1) THEN
 *
+          write(*,*)'Writing output to: ',
+     *          dname(1:ld)//'.POS'
+          OPEN (UNIT=3,file=ddir(1:ldd)//dname(1:ld)//'.POS',
+     *       FORM='UNFORMATTED',status='NEW')
+*
 *       Read input parameters, perform initial setup and obtain output.
           CPU = TCOMP
           CALL START
           CALL ADJUST
       ELSE
+*
+          fname = dname
+          write(fname(ld+1:ld+5),'(a5)') '.POS2'
+          write(*,*)'Writing output to: ',fname
+          OPEN (UNIT=3,file=ddir(1:ldd)//dname(1:ld)//'.POS2',
+     *       FORM='UNFORMATTED',status='NEW')
 *
 *       Read previously saved COMMON variables from tape/disc on unit 1.
           CALL MYDUMP(0,1)

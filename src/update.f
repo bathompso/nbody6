@@ -107,7 +107,7 @@
 *
 *       Rename deleted c.m. appropriately and increase membership by 2 or 1.
    76     LIST(L,J) = ICOMP
-*       Do not over-write the list if NNB > NNBMAX after removal of c.m.
+*       Do not over-write the list if NNB > LMAX-1 after removal of c.m.
           IF (KCASE.EQ.2) LIST(L+1,J) = JCOMP
           LIST(1,J) = NNB + KCASE
           IF (KCASE.EQ.1.AND.IW.LT.10) THEN

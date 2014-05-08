@@ -1,14 +1,15 @@
-      SUBROUTINE KICK(I,ICASE,KW)
+      SUBROUTINE KICK(I,ICASE,KW,DM)
 *
 *
 *       Velocity kick for WD, neutron stars or black holes.
 *       ---------------------------------------------------
 *
       INCLUDE 'common6.h'
+      PARAMETER (VFAC=2.0D0)
       REAL*8  RAN2,VK(4)
       SAVE  IPAIR, KC, VDIS, RI
       DATA  IPAIR,KC /0,0/
-      PARAMETER (VFAC=2.0D0)
+*       WD velocity kicks: Fellhauer et al. 2003, ApJ Letters 595, L53.
 *
 *
 *       Save orbital parameters in case of KS binary (called from KSAPO).
@@ -24,10 +25,8 @@
           END IF
           KSTAR(IN) = -KSTAR(IN)
 *
-*       Determine mass loss and actual disruption velocity.
-          DM = BODY(IN) - 1.4/ZMBAR
-          IF (KW.LT.13) DM = 0.0
-          VD2 = 2.0*(BODY(N+IPAIR) - DM)/R(IPAIR)
+*       Determine disruption velocity after mass loss.
+          VD2 = 2.0*BODY(N+IPAIR)/R(IPAIR)
           VDIS = SQRT(VD2)*VSTAR
 *       Set cluster escape velocity (add twice central potential).
           VP2 = 2.0*BODY(N+IPAIR)/R(IPAIR)
@@ -35,7 +34,12 @@
           SEMI = -0.5*BODY(N+IPAIR)/H(IPAIR)
           ZM1 = BODY(I1)*SMU
           ZM2 = BODY(I1+1)*SMU
-          EB = BODY(I1)*BODY(I1+1)/BODY(N+IPAIR)*H(IPAIR)
+*       Skip case of massless binary.
+          IF (BODY(N+IPAIR).GT.0.0D0) THEN
+              EB = BODY(I1)*BODY(I1+1)/BODY(N+IPAIR)*H(IPAIR)
+          ELSE
+              EB = 0.0
+          END IF
           RI = R(IPAIR)
 *       Skip on #25 = 0/1 for consistent net WD modification of EKICK.
           IF ((KW.LT.13.AND.KZ(25).EQ.0).OR.
@@ -87,6 +91,7 @@
               DISP = 0.0
           END IF
       END IF
+*     IF (KW.EQ.14) DISP = 0.0
 *
 *       Use Henon's method for pairwise components (Douglas Heggie 22/5/97).
       DO 2 K = 1,2

@@ -27,7 +27,7 @@
 *       Obtain irregular & regular force and determine current neighbours.
       RS2 = RS(I)**2
 *       Take volume between inner and outer radius equal to basic sphere.
-    1 RCRIT2 = 1.59*RS2
+      RCRIT2 = 1.59*RS2
 *       Set radial velocity factor for the outer shell.
       VRFAC = -0.1*RS2/DTR
 *       Start count at 2 and subtract 1 at the end to avoid ILIST(NNB+1).
@@ -317,7 +317,7 @@
       END IF
 *
 *       Calculate the radial velocity with respect to at most 3 neighbours.
-      IF (NNB.LE.3) THEN
+      IF (NNB.LE.3.AND.RI2.GT.RH2) THEN
           A1 = 2.0*RS(I)
 *
           DO 45 L = 1,NNB
@@ -361,6 +361,10 @@
 *       Check case of zero old membership (NBGAIN = NNB specifies net gain).
       IF (NNB0.EQ.0) THEN
           NBGAIN = NNB
+*       Copy new members for fpcorr.f.
+          DO 52 L = 1,NNB
+              JLIST(L) = ILIST(L+1)
+   52     CONTINUE
           GO TO 70
       END IF
 *

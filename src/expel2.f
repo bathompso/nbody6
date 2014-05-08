@@ -81,17 +81,8 @@
 *       Evaluate potential energy of #I3/I4 before mass loss & displacement.
       CALL NBPOT(2,NP,POT1)
 *
-*       Update the stars to previous latest time (only for original KS pair).
-*     ID = 0
-*       Check original identity (NCH=3 may have been reduced from B-B).
-*     DO 2 L = 1,2
-*         IF (NAME(I1) + NAME(I2).EQ.KSAVE(2*L)) THEN
-*             ID = 1
-*         END IF
-*   2 CONTINUE
-      TEV1 = MAX(TEV0(I1),TEV0(I2))
-*
 *       Specify basic parameters for both stars.
+      TEV1 = MAX(TEV0(I1),TEV0(I2))
       M01 = BODY0(I1)*ZMBAR
       M1 = BODY(I1)*ZMBAR
       MC1 = 0.D0
@@ -268,7 +259,7 @@
 *
 *       Include potential energy terms due to all non-chain members.
           POTJ = 0.d0
-      RX = 10.
+          RX = 10.
 *       Note no initialization of neighbours done in the chain case.
           DO 50 J = IFIRST,NTOT
               IF (J.NE.I1.AND.J.NE.I2.AND.J.NE.I3.AND.J.NE.I4) THEN
@@ -276,7 +267,7 @@
      &                   (X(2,J) - XCM(2))**2 +
      &                   (X(3,J) - XCM(3))**2
                   POTJ = POTJ - BODY(J)/SQRT(RIJ2)
-      RX = MIN(RX,RIJ2)
+                  RX = MIN(RX,RIJ2)
               END IF
    50     CONTINUE
 *
@@ -293,7 +284,7 @@
           ECDOT = ECDOT + DM*POTJ + (POT2 - POT1)
 *
           WRITE (6,55)  DM*POTJ, SQRT(RX), SEMI00*SU, SEMI0*SU, EBS
-   55     FORMAT (' EXPEL2!    DM*POTJ RX A00 A0 EBS ',1P,6E10.2)
+   55     FORMAT (' EXPEL2    DM*POTJ RX A00 A0 EBS ',1P,6E10.2)
           WRITE (6,60)  (NAME(JLIST(K)),K=1,4), KSTAR(I1), KSTAR(I2),
      &                  KW1, KW2, M1, M2, DM*ZMBAR, ECC, R1, R2,
      &                  SEMI0*SU, SEMI*SU, EBS, POT2-POT1
@@ -315,61 +306,81 @@
               DO 62 L = 1,NCH
                   JPERT(L) = JLIST(L)
    62         CONTINUE
-              CALL KICK(I1,1,KW1)
+              CALL KICK(I1,1,KW1,DM)
               DO 65 L = 1,NCH
                   JLIST(L) = JPERT(L)
    65         CONTINUE
           END IF
       END IF
 *
-*       Initialize neighbour force polynomials on significant mass loss.
-      IF (DM*SMU.GT.0.1) THEN
-*       Save reference body in temporary variables.
-          DO 70 K = 1,3
-              XREL(K) = X(K,ICH)
-              VREL(K) = XDOT(K,ICH)
-              XCM(K) = 0.0
-              VCM(K) = 0.0
-   70     CONTINUE
-          SAVEB = BODY(ICH)
+*       Save reference body in temporary variables (original chain masses).
+      DO 70 K = 1,3
+          XREL(K) = X(K,ICH)
+          VREL(K) = XDOT(K,ICH)
+          XCM(K) = 0.0
+          VCM(K) = 0.0
+   70 CONTINUE
 *
-*       Form new c.m. body.
-          ZM = 0.0
-          DO 80 L = 1,NCH
-              J = JLIST(L)
-              IF (J.EQ.0) GO TO 80
-              ZM = ZM + BODY(J)
-              DO 75 K = 1,3
-                  XCM(K) = XCM(K) + BODY(J)*X(K,J)
-                  VCM(K) = VCM(K) + BODY(J)*XDOT(K,J)
-   75         CONTINUE
-   80     CONTINUE
-          DO 85 K = 1,3
-              X(K,ICH) = XCM(K)/ZM
-              XDOT(K,ICH) = VCM(K)/ZM
-   85     CONTINUE
-          BODY(ICH) = ZM
+*       Form new c.m. body for new FPOLY1/2 with continuation of chain.
+      ZM = 0.0
+      DO 80 L = 1,NCH
+          J = JLIST(L)
+          IF (J.EQ.0) GO TO 80
+          ZM = ZM + BODY(J)
+          DO 75 K = 1,3
+              XCM(K) = XCM(K) + BODY(J)*X(K,J)
+              VCM(K) = VCM(K) + BODY(J)*XDOT(K,J)
+   75     CONTINUE
+   80 CONTINUE
+*       Place the c.m. system temporarily in location #ICH.
+      DO 85 K = 1,3
+          X(K,ICH) = XCM(K)/ZM
+          XDOT(K,ICH) = VCM(K)/ZM
+   85 CONTINUE
 *
-*       Loop over all c.m. neighbours (lists contain old name).
+*       Set individual chain masses to zero and copy sum to #ICH.
+      B1 = BODY(I1)
+      B2 = BODY(I2)
+      B3 = BODY(I3)
+      IF (I4.GT.0) B4 = BODY(I4)
+      BODY(I1) = 0.0
+      BODY(I2) = 0.0
+      BODY(I3) = 0.0
+      IF (I4.GT.0) BODY(I4) = B4
+      BODY(ICH) = ZM
+*
+*       Loop over all perturbers (choice of perturber or neighbour list).
+      IF (DMSUN.LT.0.2) THEN
+          NNB1 = LISTC(1) + 1
+      ELSE
           NNB1 = LIST(1,ICH) + 1
-          DO 95 L = 2,NNB1
-              J = LIST(L,ICH)
-              IF (J.EQ.I1.OR.J.EQ.I3.OR.J.EQ.I4) GO TO 95
-              CALL DTCHCK(TIME,STEP(J),DTK(40))
-              DO 90 KK = 1,3
-                  X0DOT(KK,J) = XDOT(KK,J)
-   90         CONTINUE
-              CALL FPOLY1(J,J,0)
-              CALL FPOLY2(J,J,0)
-   95     CONTINUE
-*
-*       Restore reference body.
-          DO 99 K = 1,3
-              X(K,ICH) = XREL(K)
-              XDOT(K,ICH) = VREL(K)
-   99     CONTINUE
-          BODY(ICH) = SAVEB
       END IF
+      DO 95 L = 2,NNB1
+          IF (DMSUN.LT.0.2) THEN
+              J = LISTC(L)
+          ELSE
+              J = LIST(L,ICH)
+          END IF
+          CALL DTCHCK(TIME,STEP(J),DTK(40))
+          DO 90 KK = 1,3
+              X0DOT(KK,J) = XDOT(KK,J)
+   90     CONTINUE
+          SJR = STEPR(J)
+          CALL FPOLY1(J,J,0)
+          CALL FPOLY2(J,J,0)
+*       Replace possible small regular step with current value above 1D-04.
+          IF (SJR.GT.1.0D-04) STEPR(J) = SJR
+   95 CONTINUE
+*
+*       Restore masses and reference body (needed for CHINIT).
+      BODY(I1) = B1
+      BODY(I2) = B2
+      BODY(I3) = B3
+      IF (I4.GT.0) BODY(I4) = B4
+      DO 99 K = 1,3
+          X(K,ICH) = XREL(K)
+          XDOT(K,ICH) = VREL(K)
+   99 CONTINUE
 *
 *       Re-define indices of colliding bodies with J1 as new c.m.
   100 J1 = I1

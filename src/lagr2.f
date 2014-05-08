@@ -138,6 +138,7 @@
 *
 *       Form sum of inverse separations to evaluate mass segregation.
       POT0 = 0.0
+      LX0 = MAX(LX0,1)
       DO 44 L = LX0,NP-1
           I = ILIST(L)
           DO 42 LL = L+1,NP
@@ -153,27 +154,28 @@
       IF (NP0.LE.1) POT0 = 1.0
       RP0 = FLOAT(NP0)*(NP0 - 1)/(2.0*POT0)
 *
-*       Search for black holes.
+*       Search for single black holes and include KS binary.
       N14 = 0
+      N14X = 0
       SEMI = 0
       POTBH = 0.0
       ZMBH = 0.0
       DO 45 I = IFIRST,NTOT
-          IF (KSTAR(I).EQ.14) THEN
+          IF (KSTAR(I).EQ.14.AND.BODY(I).GT.0.0D0) THEN
               N14 = N14 + 1
               ILIST(N14) = I
               ZMBH = ZMBH + BODY(I)*SMU
           ELSE IF (I.GT.N) THEN
+*       Note: the following lines must be used for KS binary.
               J1 = 2*(I - N) - 1
               IF (KSTAR(J1).EQ.14.AND.KSTAR(J1+1).EQ.14) THEN
-                  IP = I - N
-*       Include both binary components in the loop below.
+*       Add only one KS component to avoid small RIJ2 but use extra count.
                   N14 = N14 + 1
-                  ILIST(N14) = 2*IP - 1
-                  N14 = N14 + 1
-                  ILIST(N14) = 2*IP
-                  SEMI = -0.5*BODY(I)/H(IP)
+                  N14X = N14X + 1
+                  ILIST(N14) = I
                   ZMBH = ZMBH + BODY(I)*SMU
+                  IP = I - N
+                  SEMI = -0.5*BODY(I)/H(IP)
               END IF
           END IF
    45 CONTINUE
@@ -189,10 +191,12 @@
                   RIJ2 = RIJ2 + (X(K,I) - X(K,J))**2
    46         CONTINUE
               POTBH = POTBH + 1.0/SQRT(RIJ2)
+*       Note internal terms not included at present.
               IF (I.LT.IFIRST) POT12 = POT12 + 1.0/SQRT(RIJ2)
    47     CONTINUE
    48 CONTINUE
 *       Define mean geometric distance (modified by binary 10/2/11).
+      N14 = N14 + N14X
       IF (N14.GT.1) RBH = FLOAT(N14)*(N14 - 1)/(2.0*POTBH)
 *       Omit internal binary contribution for secondary definition.
       IF (POT12.GT.0.0) THEN
@@ -201,7 +205,7 @@
           RX = 0.0
       END IF
 *
-*       Search for neutron stars.
+*       Search for single neutron stars and include KS binary.
       N13 = 0
       SEMI2 = 0
       POT13 = 0.0
@@ -215,14 +219,11 @@
           ELSE IF (I.GT.N) THEN
               J1 = 2*(I - N) - 1
               IF (KSTAR(J1).EQ.13.AND.KSTAR(J1+1).EQ.13) THEN
-                  IP = I - N
-*       Include both binary components in the loop below.
                   N13 = N13 + 1
-                  ILIST(N13) = 2*IP - 1
-                  N13 = N13 + 1
-                  ILIST(N13) = 2*IP
-                  SEMI2 = -0.5*BODY(I)/H(IP)
+                  ILIST(N13) = I
                   ZM13 = ZM13 + BODY(I)*SMU
+                  IP = I - N
+                  SEMI2 = -0.5*BODY(I)/H(IP)
               END IF
           END IF
   145 CONTINUE
@@ -308,6 +309,7 @@
      &                           F7.1,I5,I6,I7,1X,5F7.3)
 *
       IF (N14.GT.1.OR.N13.GT.1) THEN
+          N14 = MAX(N14,1)
           WRITE (6,80)  TIME+TOFF, TPHYS, N14, ZMBH/FLOAT(N14), RBH,
      &                  SEMI, N13, R13, RX
    80     FORMAT (/,' BH/NS SUBSYSTEM:    T TPHYS NBH <MBH> RBH A ',

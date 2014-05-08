@@ -14,7 +14,7 @@
      &               RP(NTMAX),ES(NTMAX),CM(2,NTMAX),IOSC(NTMAX),
      &               NAMEC(NTMAX)
       COMMON/SLOW0/  RANGE,ISLOW(10)
-      common/spins/angmom0,rg2(2),m21,r21,semi0,C1,C2,C3,C4,semi
+      common/spins/angmom0,rg2(2),m21,r21,semi0,C1,C2,C3,C4,C5,semi
       REAL*8  WW(3),QQ(3),W(2),Q(2),AT0(2),M21,WG(2),QG(2),WSCALE(2),
      &        QSCALE(2),A(2),B(2),C(6),meanmotion,RJ(2),ROL(2)
       REAL*8  M0,MC1,MC2,CORERD
@@ -467,6 +467,7 @@
 *
 *       Adopt common envelope evolution for eccentric binaries with Q1 > QC.
       Q1 = BODY(J1)/BODY(J2)
+      IF (N.GT.0) GO TO 99  ! Fudge 10/12 to avoid COAL without ISTAT(KCASE).
       IF (DTR.LT.0.1/TSTAR.AND.Q1.GT.QC.AND.ISTAR.EQ.0) THEN
           KSPAIR = IPAIR
           TIME = TBLOCK
@@ -478,6 +479,7 @@
           TEV(I2) = TEV(I1)
           GO TO 100
       END IF
+   99 CONTINUE   ! Fudge leads to SPIRAL TERM and ENFORCED ROCHE.
 *
 *       Enforce termination at constant angular momentum on Roche condition.
       IF (DTR.LE.0.1/TSTAR) THEN
@@ -574,10 +576,11 @@
           IF (DTR.EQ.0.0D0.AND.SEMI.LT.0.5*RADIUS(J1)) THEN
               KSPAIR = IPAIR
               IQCOLL = 1
-              WRITE (6,23)
-   23         FORMAT (' ENFORCED COAL')
-              CALL CMBODY(R(IPAIR),2)
-              IF (IPHASE.LT.0) GO TO 100
+              WRITE (6,23)  IPAIR
+   23         FORMAT (' ENFORCED COAL    KS = ',I4)
+*        Delay coalescence until detected by ROCHE or UNPERT.
+*             CALL CMBODY(R(IPAIR),2)
+*             IF (IPHASE.LT.0) GO TO 100
           END IF
       END IF
 *

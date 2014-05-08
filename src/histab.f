@@ -8,10 +8,11 @@
       REAL*8  XX(3,3),VV(3,3)
 *
 *
-*       Define KS & c.m. indices.
+*       Define KS & c.m. indices and save IPAIR for RETURN.
       I1 = 2*IPAIR - 1
       I2 = I1 + 1
       I = N + IPAIR
+      JPAIR = IPAIR
 *
 *       Evaluate semi-major axis & eccentricity of inner binary.
       SEMI = -0.5D0*BODY(I)/H(IPAIR)
@@ -112,6 +113,7 @@
 *       Note: the present stability routine includes inclination!
 *     RSTAB = YFAC*RSTAB
       PCRIT = RSTAB
+      IPAIR = JPAIR
 *
    20 RETURN
 *

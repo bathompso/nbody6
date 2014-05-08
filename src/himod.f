@@ -42,7 +42,7 @@
             u(i)=evec(i)
             u(i+3)=hvec(i)
          enddo
-         CALL DERIV(u,udot)
+         CALL DERIV(u,udot,ICALL)
          TAU = e0/sqrt(udot(1)**2+udot(2)**2+udot(3)**2)
          WRITE (6,5)  e0,TAU,a,Eout,Aout,(UDOT(K),K=1,3)
     5    FORMAT (' DERIV   e0 TAU a E1 A1 edot  ',

@@ -20,6 +20,7 @@
 *
 *       Read virial ratio, rotation scaling factors, tidal radius & SMAX.
       READ (5,*)  Q, VXROT, VZROT, RTIDE, SMAX
+*       Note RTIDE should be non-zero for isolated systems (cf. CALL LAGR).
       RSPH2 = RTIDE
       QVIR = Q
 *
@@ -138,6 +139,7 @@
 *       Obtain the total kinetic & potential energy.
    52 CALL ENERGY
 *
+*       Check option for astrophysical units.
       if (KZ(22).EQ.-1) then
 *       Save K.E. and P.E. of C.Ms for TCR & TRH (units of M_sun, pc & km/s).
           ZCM = ZKIN
@@ -248,7 +250,7 @@
           POT = POT*SX
       END IF
 *
-*       Perform second stage of the optional uploading procedure.
+*       Perform second stage of the optional binary uploading procedure.
       IF ((KZ(22).EQ.4.OR.KZ(22).EQ.-1).AND.(NBIN0.GT.0)) THEN
 *       Place any singles last and re-create the original binaries.
           DO 72 I = NSING,1,-1
@@ -343,7 +345,7 @@
    77     CONTINUE
       END IF
 *
-*       Check whether to include rotation (VXROT = 0 in standard case).
+*       Check whether to include rotation (VXROT = 0 in standard case). 
       IF (VXROT.GT.0.0D0) THEN
 *
 *       Set angular velocity for retrograde motion (i.e. star clusters).

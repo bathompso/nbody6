@@ -1,4 +1,3 @@
-
       SUBROUTINE R2SORT(IJ,RIJ2)
 *
 *

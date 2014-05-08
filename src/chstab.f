@@ -72,8 +72,8 @@
 *       Add 1% for perturbation to avoid repeated switching.
 *     PCRIT = 1.01*PCRIT
 *
-*       Evaluate the general stability function (Mardling MNRAS, 2008).
-      IF (ECC1.LT.1.0) THEN
+*       Evaluate the general stability function (Mardling, Cambody 2008).
+      IF (ECC1.LT.1.0.AND.ECC.LT.1.0) THEN
           NST = NSTAB(SEMI,SEMI1,ECC,ECC1,ALPHA,M(I1),M(I2),M(I3))
           IF (NST.EQ.0) THEN
               PCRIT = 0.99*PMIN

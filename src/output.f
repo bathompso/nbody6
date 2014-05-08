@@ -9,14 +9,16 @@
      &                HM(MMAX),UM(4,MMAX),UMDOT(4,MMAX),TMDIS(MMAX),
      &                NAMEM(MMAX),NAMEG(MMAX),KSTARM(MMAX),IFLAG(MMAX)
       COMMON/GALAXY/  GMG,RG(3),VG(3),FG(3),FGD(3),TG,
-     &                OMEGA,DISK,A,B,V02,RL2
+     &                OMEGA,DISK,A,B,V02,RL2,GMB,AR,GAM,ZDUM(7)
       COMMON/CLOUDS/  XCL(3,MCL),XDOTCL(3,MCL),BODYCL(MCL),RCL2(MCL),
      &                CLM(MCL),CLMDOT(MCL),CLDOT,VCL,SIGMA,RB2,PCL2,
      &                TCL,STEPCL,NCL,NEWCL
       COMMON/ECHAIN/  ECH
       REAL*8  X1(3,4),V1(3,4),UI(4),VI(4),XREL2(3),VREL2(3)
-      REAL*4  XS(3,NMAX),VS(3,NMAX),BODYS(NMAX),AS(20)
-      REAL*4  XJ(3,6),VJ(3,6),BODYJ(6)
+      REAL*8  XS(3,NMAX),VS(3,NMAX),BODYS(NMAX),AS(40)
+      REAL*8  XJ(3,6),VJ(3,6),BODYJ(6)
+      REAL*8  R2,RHO
+      REAL*8  LUMINOSITIES(NMAX),RADII(NMAX)
       LOGICAL  FIRST,SECOND,THIRD
       SAVE  FIRST,SECOND,THIRD
       DATA  FIRST,SECOND ,THIRD/.TRUE.,.TRUE.,.TRUE./
@@ -46,7 +48,7 @@
       DE = DE/MAX(ZKIN,ABS(ETOT))
 *       Save sum of relative energy error for main output and accumulate DE.
       ERROR = ERROR + DE
-      VIR = POT
+      VIR = POT - VIR
 *
 *       Find density centre & core radius (Casertano & Hut, Ap.J. 298, 80).
       IF (N.GE.20.AND.KZ(29).EQ.0) THEN
@@ -118,7 +120,7 @@
       END IF
 *
 *       Form binary & merger energy ratios and count escapers (or suppress).
-      EB = EBIN/(ZKIN - POT)
+      EB = (EBIN + ECH)/(ZKIN - POT)
       EM = EMERGE/(ZKIN - POT)
       IF (KZ(21).GT.1) THEN
           CALL JACOBI(NESC)
@@ -130,11 +132,11 @@
       I6 = TSCALE*TTOT
 *
       WRITE (6,40)  TTOT, N, NNB, NPAIRS, NMERGE, MULT, NS, NSTEPI,
-     &              NSTEPB, NSTEPR, NSTEPU, ERROR, BE(3)
+     &              NSTEPB, NSTEPR, NSTEPU, ERROR, BE(3), ZMASS
    40 FORMAT (//,' T =',F7.0,'  N =',I6,'  <NB> =',I3,'  KS =',I5,
      &           '  NM =',I3,'  MM =',I2,'  NS =',I6,
      &           '  NSTEPS =',I11,I10,2I11,'  DE =',1P,E9.1,
-     &           '  E =',0P,F10.6)
+     &           '  E =',0P,F10.6,'  M =',F7.4)
 *
       IF (KZ(21).GT.0) THEN
           CALL CPUTIM(TCOMP)
@@ -147,9 +149,9 @@
      &                  DMIN4, AMIN, RMAX, RSMIN, NEFF
    45     FORMAT (/,' NRUN =',I3,'  M# =',I3,'  CPU =',F8.1,'  TRC =',
      &                        F5.1, '  DMIN =',1P,4E8.1,'  AMIN =',E8.1,
-     &                '  RMAX =',E8.1,'  RSMIN =',0P,F5.2,'  NEFF =',I6)
+     &                '  RMAX =',E8.1,'  RSMIN =',0P,F6.3,'  NEFF =',I6)
       END IF
-      VRMS = SQRT(0.5*ZMASS/RSCALE)*VSTAR
+      VRMS = SQRT(2.0*ZKIN/ZMASS)*VSTAR
 *
       WRITE (6,50)
    50 FORMAT (/,'    <R>  RTIDE  RDENS   RC    NC   MC   RHOD   RHOM',
@@ -160,7 +162,7 @@
       WRITE (6,55)  RSCALE, RTIDE, RD, RC, NC, ZMC, RHOD, RHOM, CMAX,
      &              CNNB, COST, IUNP, NP, CMR(4), CMRDOT(4), AZ, EB, EM,
      &              TCR, I6, NESC, VRMS
-   55 FORMAT (' #1',F5.2,F6.1,F6.2,F7.3,I5,F7.3,F6.0,F7.0,F6.0,F6.1,
+   55 FORMAT (' #1',F5.2,F6.1,F6.2,F7.4,I5,F7.3,F6.0,F7.0,F6.0,F6.1,
      &                   F7.3,I5,I6,F8.3,F8.4,F9.4,2F7.3,F6.2,2I6,F6.1)
 *
       WRITE (6,60)
@@ -184,13 +186,20 @@
    75 FORMAT (' #3',I9,I7,I8,I11,I8,I7,2I9,2I7,I8,2I7,3I8)
 *
 *       Check output for mass loss or tidal capture.
-      IF (KZ(19).GT.0.OR.KZ(27).GT.0) THEN
+      IF (KZ(19).GE.3.OR.KZ(27).GT.0) THEN
           CALL EVENTS
       END IF
 *
 *       Obtain half-mass radii for two groups (NAME <= NZERO/5 & > NZERO/5).
       IF (KZ(7).GE.2) THEN
           CALL LAGR2(RDENS)
+      END IF
+*
+*       Check optional plotting file for main cluster parameters.
+      IF (KZ(44).GT.0) THEN
+          WRITE (56,77) TPHYS, TIME+TOFF, RSCALE*RBAR, ZMASS*SMU, NCOLL
+   77     FORMAT (' ',1P,4E12.4,0P,I5)
+          CALL FLUSH(56)
       END IF
 *
 *       Include diagnostics about cluster orbit in general external field.
@@ -285,7 +294,7 @@
 *
 *       Check optional diagnostics of evolving stars.
       IF (KZ(12).GT.0.AND.TIME.GE.TPLOT) THEN
-          CALL HRPLOT
+          CALL HRPLOT(LUMINOSITIES,RADII)
       END IF
 *
 *       Check optional writing of data on unit 3 (frequency NFIX). 
@@ -301,7 +310,7 @@
       AS(7) = RDENS(1)
       AS(8) = RDENS(2)
       AS(9) = RDENS(3)
-      AS(10) = TTOT/TCR
+      AS(10) = TSCALE*TTOT
       AS(11) = TSCALE
       AS(12) = VSTAR
       AS(13) = RC
@@ -312,6 +321,34 @@
       AS(18) = RSCALE
       AS(19) = RSMIN
       AS(20) = DMIN1
+      AS(21) = RG(1)
+      AS(22) = RG(2)
+      AS(23) = RG(3)
+      AS(24) = GMG
+      AS(25) = ZDUM(1)
+      AS(26) = OMEGA
+      AS(27) = VG(1)
+      AS(28) = VG(2)
+      AS(29) = VG(3)
+      AS(30) = DISK
+      AS(31) = A
+      AS(32) = B
+      AS(33) = V02
+      AS(34) = RL2
+      AS(35) = GMB
+      AS(36) = AR
+      AS(37) = GAM
+      AS(38) = ZDUM(2)
+      AS(39) = ZDUM(3)
+      AS(40) = ZDUM(4)
+*
+*
+*       Include prediction of unperturbed binaries (except ghosts).
+      DO 84 J = 1,NPAIRS
+          IF (LIST(1,2*J-1).EQ.0.AND.BODY(N+J).GT.0.0D0) THEN
+              CALL RESOLV(J,1)
+          END IF
+   84 CONTINUE
 *
 *       Convert masses, coordinates & velocities to single precision.
       DO 90 I = 1,NTOT
@@ -437,16 +474,13 @@
       END IF
 *
 *       Split into WRITE (3) NTOT & WRITE (3) ..  if disc instead of tape.
-      IF (FIRST) THEN
-          OPEN (UNIT=3,STATUS='NEW',FORM='UNFORMATTED',FILE='OUT3')
-          FIRST = .FALSE.
-      END IF
-      NK = 20
-      WRITE (3)  NTOT, MODEL, NRUN, NK
+      NK = 40
+      WRITE (3)  NTOT, NK, N
       WRITE (3)  (AS(K),K=1,NK), (BODYS(J),J=1,NTOT),
      &           ((XS(K,J),K=1,3),J=1,NTOT), ((VS(K,J),K=1,3),J=1,NTOT),
-     &           (NAME(J),J=1,NTOT)
-*     CLOSE (UNIT=3)
+     &           (RADII(J),J=1,NTOT),(NAME(J),J=1,NTOT),
+     &           (KSTAR(J),J=1,NTOT),(LUMINOSITIES(J),J=1,NTOT)
+      CALL FLUSH(3)
 *
 *       Produce output file for tidal tail members.
    99 IF (KZ(3).LE.3.AND.NTAIL.GT.0) THEN

@@ -19,6 +19,11 @@
 *       to include from Z=0.0001 to Z=0.03, convective overshooting,
 *       MS hook and more elaborate CHeB.
 *
+*       Revised 21st January 2011 by A. D. Railton
+*       to include pre-mainsequence evolution for 0.1-8.0 Msun
+*       with solar metallicity. Note KW=-1 for preMS evolution.
+*       Use negative aj for preMS.
+*
       implicit none
 *
       integer kw,kwp
@@ -32,7 +37,7 @@
       real*8 mxns,mxns0,mxns1
       parameter(mxns0=1.8d0,mxns1=3.d0)
       real*8 mass0,mt0,mtc
-*
+* 
       real*8 thook,thg,tbagb,tau,tloop,taul,tauh,tau1,tau2,dtau,texp
       real*8 lx,ly,dell,alpha,beta,neta
       real*8 rx,ry,delr,rzams,rtms,gamma,rmin,taumin,rg
@@ -40,6 +45,8 @@
       real*8 mcmax,mcx,mcy,mcbagb,lambda
       real*8 am,xx,fac,rdgen,mew,lum0,kap,zeta,ahe,aco
       parameter(lum0=7.0d+04,kap=-0.5d0,ahe=4.d0,aco=16.d0)
+*
+      real*8 tprems,pre1,pre2,pre3,pre4
 *
       real*8 thookf,tblf
       real*8 lalphf,lbetaf,lnetaf,lhookf,lgbtf,lmcgbf,lzhef,lpertf
@@ -65,11 +72,11 @@
 *       ZPARS   Parameters for distinguishing various mass intervals.
 *       R       Stellar radius in solar units.
 *       TE      Effective temperature (suppressed).
-*       KW      Classification type (0 - 15).
+*       KW      Classification type (-1 -> 15).
 *       MC      Core mass.
 *       ---------------------------------------------------------------------
 *
-* Set maximum NS mass depending on which NS mass prescription is used.
+* Set maximum NS mass depending on which NS mass prescription is used. 
       mxns = mxns0
       if(nsflag.eq.1) mxns = mxns1
 *
@@ -88,7 +95,62 @@
       rzams = rzamsf(mass)
       rtms = rtmsf(mass)
 *
-      if(aj.lt.tscls(1))then
+      if(aj.ge.0.d0.and.kw.eq.-1)then
+         if(mass.le.0.7d0)then
+            kw = 0
+         else
+            kw = 1
+         endif
+      endif
+*
+      if(aj.lt.0.d0)then
+*
+*        PreMS evolution (valid for 0.1<=M<=8.0).
+*
+         kw = -1
+         tprems = -1.d0*aj/tscls(15)
+* Note: tprems cannot exceed 1 - if it does, start at top of Hayashi track.
+         if(tprems.gt.1.d0)then
+            tprems = 1.d0
+         endif
+*
+         if(mass.le.1.d0)then
+            pre1 = 0.d0
+            pre2 = 0.d0
+            pre3 = 7.432d-02 - 9.43d-02*mass + 7.439d-02*mass**2
+         endif
+         if(mass.gt.1.d0.and.mass.lt.2.d0)then
+            pre1 = -4.00772d0 + 4.00772d0*mass
+            pre2 = 8.5656d0 - 8.5656d0*mass
+            pre3 = -4.50678d0 + 4.56118d0*mass
+         endif
+         if(mass.ge.2.d0)then
+            pre1 = 1.60324d0 + 2.20401d0*mass - 0.60433d0*mass**2 +
+     &         5.172d-02*mass**3
+            pre2 = -4.56878d0 - 4.05305d0*mass + 1.24575*mass**2 -
+     &         0.10922d0*mass**3
+            pre3 = 3.01153 + 1.85745*mass -0.64290d0*mass**2 +
+     &         5.759d-02*mass**3
+         endif
+*
+         rzams = rzamsf(mass)
+         r = rzams*10.d0**((pre1*tprems**3 + pre2*tprems**4 +
+     &     pre3*tprems**5)/(1.05d0-tprems))
+*
+         pre1 = -2.63181d0 + 3.16607d0*mass - 3.30223d0*mass**2 +
+     &     0.83556d0*mass**3 - 0.06356d0*mass**4
+         pre2 = -11.70230d0 + 16.60510d0*mass - 9.69755d0*mass**2 +
+     &     2.42426d0*mass**3 - 0.27213d0*mass**4 + 0.01134d0*mass**5
+         pre3 = 26.19360d0 - 35.09590d0*mass + 20.64280d0*mass**2 -
+     &     5.18601d0*mass**3 + 0.58360d0*mass**4 - 0.02434d0*mass**5
+         pre4 = -14.64590d0 + 18.55660d0*mass - 10.95070d0*mass**2 +
+     &     2.75979d0*mass**3 - 0.31103d0*mass**4 + 0.01298d0*mass**5
+*
+         lum = lums(1)*10.d0**((exp(pre1*tprems**2) - 1.d0)*
+     &     (pre2*tprems + pre3*tprems**2 + pre4*tprems**3)/
+     &     (1.05d0-tprems))
+*
+      elseif(aj.lt.tscls(1))then
 *
 *        Either on MS or HG
 *
@@ -138,8 +200,8 @@
 *
             if(mass.lt.(zpars(1)-0.3d0))then
                kw = 0
-* This following is given by Chris for low mass MS stars which will be
-* substantially degenerate. We need the Hydrogen abundance, X, which we
+* This following is given by Chris for low mass MS stars which will be 
+* substantially degenerate. We need the Hydrogen abundance, X, which we 
 * calculate from Z assuming that the helium abundance, Y, is calculated
 * according to Y = 0.24 + 2*Z
                rdgen = 0.0258d0*((1.d0+zpars(11))**(5.d0/3.d0))*
@@ -149,7 +211,7 @@
                kw = 1
             endif
 *
-         else
+         else 
 *
 *           Star is on the HG
 *
@@ -356,7 +418,7 @@
                lum = lx*(ly/lx)**(tau**texp)
             endif
          endif
-*
+* 
 * Test whether core mass exceeds total mass.
 *
          if(mc.ge.mt)then
@@ -423,7 +485,7 @@
             mcy = mc
             mc = mc - lambda*(mcy-mcx)
             mcx = mc
-            mcmax = MIN(mt,mcmax)  
+            mcmax = MIN(mt,mcmax)   
          endif
          r = ragbf(mt,lum,zpars(2))
          rg = r
@@ -437,12 +499,12 @@
             if(mc.lt.mch)then
                mt = mc
                if(mcbagb.lt.1.6d0)then
-*    
+*     
 * Zero-age Carbon/Oxygen White Dwarf
 *
                   kw = 11
                else
-*    
+*     
 * Zero-age Oxygen/Neon White Dwarf
 *
                   kw = 12
@@ -503,7 +565,7 @@ c                     endif
 *
       endif
 *
-90    continue
+ 90   continue
 *
       if(kw.ge.7.and.kw.le.9)then
 *
@@ -547,13 +609,13 @@ c                     endif
                mc = mcmax
                if(mc.lt.mch)then
                   if(mass.lt.1.6d0)then
-*    
+*     
 * Zero-age Carbon/Oxygen White Dwarf
 *
                      mt = MAX(mc,(mc+0.31d0)/1.45d0)
                      kw = 11
                   else
-*    
+*     
 * Zero-age Oxygen/Neon White Dwarf
 *
                      mt = mc
@@ -768,7 +830,7 @@ c                     endif
 * Calculate mass and radius of convective envelope, and envelope
 * gyration radius.
 *
-      if(kw.lt.10)then
+      if(kw.ge.0.and.kw.lt.10)then
          CALL mrenv(kw,mass,mt,mc,lum,r,rc,aj,tm,lums(2),lums(3),
      &              lums(4),rzams,rtms,rg,menv,renv,k2)
       endif

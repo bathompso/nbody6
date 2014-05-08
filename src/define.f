@@ -93,13 +93,17 @@
 *       VZROT   Z-velocity scaling factor (not used if VXROT = 0).
 *       RTIDE   Unscaled tidal radius (#14 >= 2; otherwise copied to RSPH2).
 *       SMAX    Maximum time-step (factor of 2 commensurate with 1.0).
+*
+*        if (kz(24).gt.0)
+*
+*       M, X, V Initial subsystem (unscaled; membership = KZ(24)).
 ***
 * XTRNL0: if (kz(14).eq.2)
 *
 *       GMG     Point-mass galaxy (solar masses, linearized circular orbit).
 *       RG0     Central distance (in kpc).
 *
-*         if (kz(14).eq.3)
+*        if (kz(14).eq.3)
 *
 *       GMG     Point-mass galaxy (solar masses).
 *       DISK    Mass of Miyamoto disk (solar masses).
@@ -107,10 +111,14 @@
 *       B       Vertical softening length (kpc).
 *       VCIRC   Galactic circular velocity (km/sec) at RCIRC (=0: no halo).
 *       RCIRC   Central distance for VCIRC with logarithmic potential (kpc).
+*       GMB     Central bulge mass (Msun).
+*       AR      Scale radius in gamma/eta model (kpc, Dehnen 1993).
+*       GAM     gamma (in the range 0 =< gamma < 3).
+*
 *       RG      Initial X,Y,Z; DISK+VCIRC=0, VG(3)=0: A(1+E)=RG(1), E=RG(2).
 *       VG      Initial cluster velocity vector (km/sec).
 *
-*         if (kz(14).eq.3.or.kz(14).eq.4)
+*        if (kz(14).eq.3.or.kz(14).eq.4)
 *
 *       MP      Total mass of Plummer sphere (in scaled units).
 *       AP      Plummer scale factor (N-body units; square saved in AP2).
@@ -146,7 +154,7 @@
 *       IEV     # idealized evolved stars.
 *       RMS     Scale factor for main-sequence radii (>0: fudge factor).
 *       REV     Scale factor for evolved radii (initial size RSTAR).
-*
+***
 * INSTAR: if (kz(12).eq.2)  Input of stellar parameters on fort.12.
 ***
 * CLOUD0: if (kz(13).gt.0)
@@ -157,6 +165,12 @@
 *       SIGMA   Velocity dispersion (#13 > 1: Gaussian).
 *       CLM     Individual cloud masses in solar masses (maximum MCL).
 *       RCL2    Half-mass radii of clouds in pc (square is saved).
+***
+* CHAIN: if (kz(11).gt.0 with ARchain)
+*
+*       CLIGHT  Velocity of light in N-body units (e.g. 3.0D+05/VSTAR).
+*       NBH     Number of BHs for special treatment (redundant but keep).
+*       IDIS    Stellar disruption option (R_coll = (m/m_BH)^{1/3}*r^*).
 *       ---------------------------------------------------------------------
 *
 *
@@ -188,12 +202,16 @@
 *                               >4: standard setup using RANGE & SEMI0).
 *       9  Individual bodies on unit 6 at main output (MIN(5**KZ9,NTOT)).
 *      10  Diagnostic KS output (>0: begin KS; >1: end; >=3: each step).
-*      11  (reserved for post-Newtonian code NBODY7).
+*      11  Algorithmic Chain regularization and post-Newtonian (NBODY7).
+*              non-zero: PN for unpert KS or re-init ARchain (ksint.f);
+*              > 0: addition of initial BHs (binary/singles; scale.f);
+*              = -1: standard case of subsystem for ARchain (ksint.f);
+*              < -1: ARchain restricted to BH binary components (ksint.f).
 *      12  HR diagnostics of evolving stars (> 0; interval DTPLOT);
 *               =2: input of stellar parameters on fort.12 (routine INSTAR).
 *      13  Interstellar clouds (=1: constant velocity; >1: Gaussian).
 *      14  External force (=1: standard tidal field; =2: point-mass galaxy;
-*               =3: point-mass + disk + halo + Plummer; =4: Plummer model).
+*              =3: point-mass + bulge + disk + halo + Plummer; =4: Plummer).
 *      15  Triple, quad, chain (#30 > 0) or merger search (>1: more output).
 *      16  Updating of regularization parameters (>0: RMIN, DTMIN & ECLOSE);
 *                  >1: RMIN expression based on core radius (experimental);
@@ -209,7 +227,8 @@
 *      21  Extra output (>0: MODEL #, TCOMP, DMIN, AMIN; >1: NESC by JACOBI).
 *      22  Initial m, r, v on #10 (=1: output; >=2: input; >2: no scaling;
 *              =2: m, r, v on #10 in any units; scaled to standard units;
-*              =3: no scaling of input on fort.10;
+*                  Note: choose #20 = 0 to avoid Salpeter IMF with scaling;
+*              =3: no scaling of input read on fort.10;
 *              =4: input from mcluster.c (no scaling; binaries if NBIN0 >0);
 *              =-1: astrophysical input (M_sun, km/s, pc) on unit #10).
 *      23  Escaper removal (>1: diagnostics in file ESC with V_inf in km/s);
@@ -222,7 +241,7 @@
 *      27  Tidal effects (=1: sequential; =2: chaos; =3: GR energy loss);
 *                         =-1: collision detector, no coalescence, #13 < 0.
 *      28  GR radiation for NS & BH binaries (with #19 = 3; choice of #27);
-*                         =3: and #5 >= 6: input of ZMH = 1/SQRT(2*N).
+*                         =4 and #27 = 3: neutron star capture (instar.f).
 *      29  Boundary reflection for hot system (suppressed).
 *      30  Multiple regularization (=1: all; >1: BEGIN/END; >2: each step);
 *                                =-1: CHAIN only; =-2: TRIPLE & QUAD only. 
@@ -240,7 +259,15 @@
 *      39  No unique density centre (skips velocity modification of RS(I)).
 *      40  Neighbour number control (=1: increase if <NNB>  <  NNBMAX/2);
 *                     >=2: fine-tuning at NNBMAX/5; =3: reduction of NNBMAX.
-*      41-50  Currently free.
+*      41  Pre-mainsequence stellar evolution (only solar metallicity).
+*      42  Kozai diagnostics on fort.42 (=1: frequency 100 & EMAX > 0.99).
+*      43  Small velocity kick after GR coalescence (NBODY7 only).
+*      44  Plotting file for main cluster parameters on fort.56 (OUTPUT).
+*      45  Plotting file for BH (NAME = 1 or 2) on unit 45 (routine BHPLOT);
+*                      primordial BH defined by INSTAR; membership = KZ(24).
+*      46  Reserved for NBODY6+.
+*      47  Reserved for NBODY6+.
+*      48  GPU initialization of neighbour lists and forces.
 *       ---------------------------------------------------------------------
 *
 * NBODY6: Restart from fort.1

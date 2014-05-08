@@ -6,7 +6,7 @@
 *
       IMPLICIT REAL*8  (A-H,O-Z)
       COMMON/GALAXY/ GMG,RG(3),VG(3),FG(3),FGD(3),TG,
-     &               OMEGA,DISK,A,B,V02,RL2
+     &               OMEGA,DISK,A,B,V02,RL2,GMB,AR,GAM,ZDUM(7)
       REAL*8  XI(3),XIDOT(3),FM(3),FD(3)
 *
 *

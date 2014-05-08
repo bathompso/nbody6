@@ -22,8 +22,9 @@
       DATA ITIME /0/
 *
 *
-*       Set large circularization time for merged binary.
-      IF (RADIUS(I1).EQ.0.0D0.OR.RADIUS(I2).EQ.0.0D0) THEN
+*       Set large circularization time for merged binary or BHs.
+      IF (RADIUS(I1).EQ.0.0D0.OR.RADIUS(I2).EQ.0.0D0.OR.
+     &   (KSTAR(I1).EQ.14.AND.KSTAR(I2).EQ.14)) THEN
           TC = 1.0D+10
           GO TO 30
       END IF
@@ -101,8 +102,8 @@
      &             AT0(2)*(Q(2)/W(2))**2*((1.0 + M21)/M21**2)*R21**8)/
      &                                                         RR**8
 *
-*       Adopt WD scaling for any NS to avoid numerical problem.
-      IF (KSTAR(I1).EQ.13.OR.KSTAR(I2).EQ.13) THEN
+*       Adopt WD scaling for any NS/BH to avoid numerical problem.
+      IF (KSTAR(I1).GE.13.OR.KSTAR(I2).GE.13) THEN
           CONST = 1.0D-04*CONST
       END IF
 *

@@ -108,7 +108,7 @@
       SEMI = 2.d0/RIJ - VIJ2/ZM
       SEMI = 1.d0/SEMI
       TK = DAYS*SEMI*SQRT(ABS(SEMI)/ZM)
-      ECC = 1.0 - RCOLL/SEMI
+      ECC = MAX(1.0 - RCOLL/SEMI,0.001D0)
       IF (IQCOLL.EQ.5) THEN
           EB1 = -0.5*BODY(I1)*BODY(I2)/SEMI
       END IF
@@ -186,13 +186,16 @@
          TEV(I1) = TEV(I2)
          SPIN(I1) = SPIN(I2)
          RADIUS(I1) = RADIUS(I2)
+         RADIUS(I2) = 0.0
          NAME2 = NAME(I2)
          NAME(I2) = NAME(I1)
          NAME(I1) = NAME2
       ENDIF
       T0(I1) = TIME
-      T0(I2) = TADJ + DTADJ
-      CALL DTCHCK(TIME,STEP(I2),DTK(40))
+      T0(I2) = TADJ + DTADJ 
+      IF (KZ(23).EQ.0.OR.RTIDE.GT.1000.0*RSCALE) T0(I2) = 1.0D+10
+*     CALL DTCHCK(TIME,STEP(I2),DTK(40))
+      STEP(I2) = 1.0D+06
 *
 *       Start new star from current time unless ROCHE case with TEV0 > TIME.
       TEV0(I1) = MAX(TEV0(I1),TEV0(I2))
@@ -285,7 +288,9 @@
           CALL FCORR(I1,DM,KW)
 *
 *       Specify commensurate time-step (not needed for BODY(I1) = 0).
-          CALL DTCHCK(TIME,STEP(I1),DTK(40))
+          IF (BODY(I1).GT.0.0D0) THEN
+              CALL DTCHCK(TIME,STEP(I1),DTK(40))
+          END IF
 *
 *       Set IPHASE = -3 to preserve ILIST.
           IPHASE = -3
@@ -323,7 +328,7 @@
                           D2(K,I1) = 0.d0
                           D3(K,I1) = 0.d0
    26                 CONTINUE
-                      T0(I1) = TADJ + DTADJ
+                      T0(I1) = 1.0D+06
                       WRITE (6,28)  NAME(I1), KW1
    28                 FORMAT (' MASSLESS PRIMARY!    NAM KW ',I8,I4)
                   ELSE

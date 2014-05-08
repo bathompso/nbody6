@@ -8,7 +8,7 @@
 *
 *
 *       Specify escape energy (tidal field or isolated system).
-      IF (KZ(14).GT.0.AND.KZ(14).LT.2) THEN
+      IF (KZ(14).GT.0.AND.KZ(14).LE.2) THEN
           ECRIT = -1.5*(TIDAL(1)*ZMASS**2)**0.333
       ELSE
           ECRIT = 0.0

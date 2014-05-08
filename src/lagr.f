@@ -41,18 +41,14 @@
               R1 = 0.0
               IPREV = 0
           END IF
-          NX = 0
           I = 0
    15     I = I + 1
           IM = JLIST(I)
-*       Skip black holes and neutron stars from observational data.
-          IF (KSTAR(IM).GE.13) GO TO 15
           ZM = ZM + BODY(IM)
-*       Sum the square velocity in current shell.
+*       Sum mass-weighted square velocity in current shell.
           IF (ZM.GT.ZM1) THEN
-              VM2 = VM2 + (XDOT(1,IM)**2 + XDOT(2,IM)**2 +
-     &                                     XDOT(3,IM)**2)
-              NX = NX + 1
+              VM2 = VM2 + BODY(IM)*(XDOT(1,IM)**2 + XDOT(2,IM)**2 +
+     &                                              XDOT(3,IM)**2)
           END IF
           IF (ZM.LT.ZMH) GO TO 15
           RLAGR(IL) = SQRT(R2(I))
@@ -62,7 +58,7 @@
           IF (ABS(DM).LT.1.0D-10) THEN
               VR(IL) = 0.0
           ELSE
-              VR(IL) = SQRT(VM2/FLOAT(NX))
+              VR(IL) = SQRT(VM2/DM)
           END IF
           DV = 2.0*TWOPI/3.0*(R2(I)**1.5 - R1**3)
           DENS(IL) = DM/DV

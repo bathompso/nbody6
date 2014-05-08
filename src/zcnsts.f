@@ -4,6 +4,7 @@
       implicit none
       integer kw
 *
+      include 'zdata.h'
       real*8 z,zpars(20)
       real*8 tm,tn,tscls(20),lums(10),GB(10)
       real*8 lzs,dlzs,lz,lzd,dum1,m1,m2,rr,rb,mhefl,lhefl,thefl,lx
@@ -12,7 +13,6 @@
       external tbgbf,thef,lbagbf,lheif,lhef,lzahbf
       external rgbf,ragbf,rminf,mcgbf
 *
-      include 'zdata.h'
       real*8 msp(200),gbp(200),c(5)
       common /MSCFF/ msp
       common /GBCFF/ gbp

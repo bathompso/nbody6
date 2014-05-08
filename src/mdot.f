@@ -74,7 +74,11 @@
 *       Include braking or merger termination at time for Roche overflow.
    10 IF (I.GT.N.AND.NAME(I).LT.0.AND.KZ(34).GT.0) THEN
           KSPAIR = I - N
-          CALL BRAKE2(KSPAIR,ITERM)
+*       Check spin synchronization of inner binary for small eccentricity.
+          CALL SPINUP(KSPAIR,ITERM)
+          IF (ITERM.EQ.0) THEN
+              CALL BRAKE2(KSPAIR,ITERM)
+          END IF
           IF(ITERM.GT.0)THEN
              NWARN = NWARN + 1
              IF (NWARN.LT.1000) THEN
@@ -951,9 +955,11 @@
             IKICK = .FALSE.
             IF (KZ(25).EQ.1.AND.(KW.EQ.10.OR.KW.EQ.11)) IKICK = .TRUE.
             IF (KZ(25).EQ.2.AND.KW.EQ.12) IKICK = .TRUE.
+*       Ensure all NS/BH are assigned a kick (might depend on DM).
+            IF (KW.EQ.13.OR.KW.EQ.14) IKICK = .TRUE.
 *
 *       Perform total force & energy corrections (delay dF if DMSUN > 0.1).
-            IF ((DMSUN.LT.0.05.AND.KW.LT.10).OR..NOT.IKICK) THEN
+            IF (DMSUN.LT.0.05.AND.(KW.LT.10.OR..NOT.IKICK)) THEN
                 CALL FICORR(I,DM)
             ELSE
                 CALL FCORR(I,DM,KW)
@@ -1230,10 +1236,10 @@
             IF(IQCOLL.NE.0.OR.IPHASE.LT.0) GO TO 1
 *
 *       Include optional look-up time control for compact object binaries.
-            IF (KSX.GE.13.AND.KZ(28).GT.2) THEN
-               WRITE (6,944)  TTOT, NAME(2*IPAIR-1),KSTAR(2*IPAIR),
-     &                        DTGR/TSTAR
-  944          FORMAT (' GR CHECK   T NAM K* DTGR ',F8.2,I6,I4,1P,E9.1)
+*           IF (KSX.GE.13.AND.KZ(28).GT.2) THEN
+*              WRITE (6,944)  TTOT, NAME(2*IPAIR-1),KSTAR(2*IPAIR),
+*    &                        DTGR/TSTAR
+* 944          FORMAT (' GR CHECK   T NAM K* DTGR ',F8.2,I6,I4,1P,E9.1)
 *              IF (KSX.GE.13.AND.KZ(28).GT.0) THEN
 *              GE = (1.0 - ECC2)**3.5/(1.0 + 3.0*ECC2)
 *              ZMX = MAX(BODY(2*IPAIR-1),BODY(2*IPAIR))
@@ -1250,9 +1256,15 @@
 *              TEV(2*IPAIR-1) = TIME + 0.01*TZ
 *              TEV(2*IPAIR) = TEV(2*IPAIR-1)
 *              TMDOT = MIN(TMDOT,TEV(2*IPAIR))
-            END IF
+*           END IF
 *
             IF(KSTAR(I).GT.0.AND.KZ(34).GT.0)THEN
+*       Ensure optional updating of orbit before possible Roche test (1/2013).
+               IF (KZ(34).EQ.1.AND.KSTAR(I).GT.0.AND.
+     &            MOD(KSTAR(I),2).EQ.0)THEN
+                  CALL SYNCH(IPAIR)
+                  IF(IQCOLL.NE.0.OR.IPHASE.LT.0) GO TO 1
+               ENDIF
                JPAIR = -IPAIR
                CALL TRFLOW(JPAIR,DTR)
                IF(DTR.LT.STEP(I))THEN
@@ -1266,10 +1278,6 @@
                      TEV(J1) = MAX(1.000002d0*TEV(I),TEV(J1))
                      TEV(J2) = MAX(1.000002d0*TEV(I),TEV(J2))
                   ENDIF
-               ENDIF
-               IF (KZ(34).EQ.1.AND.KSTAR(I).GT.0.AND.
-     &            MOD(KSTAR(I),2).EQ.0)THEN
-                  CALL SYNCH(IPAIR)
                ENDIF
             ENDIF
          ENDIF

@@ -6,7 +6,7 @@
 *
       INCLUDE 'common6.h'
       COMMON/GALAXY/ GMG,RG(3),VG(3),FG(3),FGD(3),TG,
-     &               OMEGA,DISK,A,B,V02,RL2
+     &               OMEGA,DISK,A,B,V02,RL2,GMB,AR,GAM,ZDUM(7)
       REAL*8  FM(3),FD(3),FS(3),FSD(3)
 *
 *
@@ -28,9 +28,18 @@
       IF (KZ(14).EQ.3.AND.GMG.GT.0.0D0) THEN
           CALL FNUC(RG,VG,FM,FD)
       ELSE
-          DO 20 K = 1,3
+          DO 15 K = 1,3
               FM(K) = 0.0
               FD(K) = 0.0
+   15     CONTINUE
+      END IF
+*
+*       Check bulge force.
+      IF (GMB.GT.0.0D0) THEN
+          CALL FBULGE(RG,VG,FS,FSD)
+          DO 20 K = 1,3
+              FM(K) = FM(K) + FS(K)
+              FD(K) = FD(K) + FSD(K)
    20     CONTINUE
       END IF
 *
@@ -44,7 +53,7 @@
       END IF
 *
 *       Check addition of logarithmic galaxy potential (not linearized).
-      IF (V02.GT.0.0D0) THEN
+      IF (V02.GT.0.0D0.AND.ZDUM(2).EQ.0.0D0) THEN
           CALL FHALO(RG,VG,FS,FSD)
           DO 30 K = 1,3
               FM(K) = FM(K) + FS(K)
@@ -52,9 +61,18 @@
    30     CONTINUE
       END IF
 *
+*       Check addition of NFW halo potential.
+      IF (ZDUM(2).GT.0.0D0) THEN
+          CALL FNFW(RG,VG,FS,FSD)
+          DO 35 K = 1,3
+              FM(K) = FM(K) + FS(K)
+              FD(K) = FD(K) + FSD(K)
+   35     CONTINUE
+      END IF
+*
 *       Set time factors for corrector.
       DT13 = ONE3*DT
-      DTSQ12 = ONE12*DT**2  
+      DTSQ12 = ONE12*DT**2
       TG = TG + DT
 *
 *       Include the Hermite corrector and update F & FDOT.

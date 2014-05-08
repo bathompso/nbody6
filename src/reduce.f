@@ -173,6 +173,9 @@
           NAMES(L,ISUB) = NAMES(L+1,ISUB)
    70 CONTINUE
 *
+*       Ensure current coordinates & velocities for chain components.
+      CALL XCPRED(1)
+*
 *       Initialize neighbour list using current radius of (old) #ICH.
       CALL NBLIST(ICH,RS0)
 *
@@ -230,6 +233,15 @@
               RDOT = RDOT + (X(K,I) - X(K,ICH))*(XDOT(K,I)-XDOT(K,ICH))
    86     CONTINUE
           CALL FPOLY2(I,I,0)
+*       Reduce regular steps for large velocities to minimize NNB change.
+          J = ICH
+          DO 87 L = 1,2
+              VI2 = XDOT(1,J)**2 + XDOT(2,J)**2 + XDOT(3,J)**2
+              IF (VI2.GT.2.0.AND.STEPR(J).GE.8.0*STEP(J)) THEN
+                  STEPR(J) = STEPR(J)/8.0D0
+               END IF
+               J = I
+   87     CONTINUE
 *       Check high-velocity ejection for outwards hyperbolic motion.
           HI = 0.5*VIJ2 - (BODY(I) + BODY(ICH))/SQRT(RIJ2)
           IF (HI.GT.0.0.AND.RDOT.GT.0.0) THEN
@@ -277,9 +289,6 @@
           WRITE (6,97)  TIME+TOFF, (CG(K),K=1,6)
    97     FORMAT (' REDUCE:   T CG ',F12.5,1P,6E9.1)
       END IF
-*
-*       Ensure current coordinates & velocities for chain components.
-      CALL XCPRED(1)
 *
   100 RETURN
 *

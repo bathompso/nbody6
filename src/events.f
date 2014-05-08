@@ -34,7 +34,7 @@
           WRITE (6,20)  NMDOT, NRG, NHE, NRS, NNH, NWD, NSN, NBH, NBS,
      &                  ZMRG, ZMHE, ZMRS, ZMNH, ZMWD, ZMSN, ZMDOT,
      &                  (NTYPE(J),J=1,KM)
-   20     FORMAT (' #4',I9,8I5,2F6.1,F7.1,3F6.1,F8.1,I7,I6,9I4,I5,3I4)
+   20     FORMAT (' #4',I9,8I5,2F6.1,F7.1,3F6.1,F8.1,I7,I6,9I4,I5,4I4)
       END IF
 *
 *       Determine turnoff mass at current cluster age (cf. routine STAR).

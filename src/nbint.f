@@ -8,9 +8,15 @@
       COMMON/CHAINC/  XC(3,NCMAX),UC(3,NCMAX),BODYC(NCMAX),ICH,
      &                LISTC(LMAX)
       REAL*8  XI(3),XIDOT(3),FIRR(3),FREG(3),FD(3),FDUM(3),DV(3)
-      SAVE TCALL
-      DATA TCALL /0.0D0/
+      SAVE TCALL,ISTART
+      DATA ISTART /0/
 *
+*
+*       Initialize binary search time to current TTOT at start/restart.
+      IF (ISTART.EQ.0) THEN
+          ISTART = 1
+          TCALL = TTOT
+      END IF
 *
 *       Check regularization criterion for single particles.
       IF (STEP(I).LT.DTMIN.AND.I.LE.N) THEN
@@ -21,12 +27,12 @@
       END IF
 *
 *       Include close encounter search for low-eccentric massive binaries.
-      IF (IKS.EQ.0.AND.STEP(I).LT.4.0*DTMIN.AND.TCALL.LT.TTOT) THEN
-          TCALL = TTOT + 0.01
+      IF (IKS.EQ.0.AND.STEP(I).LT.8.0*DTMIN.AND.TCALL.LT.TTOT) THEN
 *       Consider massive single bodies in absence of subsystems. 
           IF (I.LE.N.AND.BODY(I).GT.2.0*BODYM.AND.NSUB.EQ.0) THEN
 *
 *       Obtain two-body elements and relative perturbation.
+              TCALL = TTOT + 0.01
               JMIN = 0
               CALL ORBIT(I,JMIN,SEMI,ECC,GI)
 *
@@ -41,6 +47,7 @@
                       IKS = IKS + 1
                       ICOMP = I
                       JCOMP = JMIN
+                      TCALL = TTOT - 1.0D-04
                   END IF
               END IF
           END IF

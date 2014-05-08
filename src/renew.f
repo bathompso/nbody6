@@ -22,7 +22,9 @@
       TK = TWOPI*SEMI*SQRT(SEMI/BODY(I))
 *
 *       Estimate consistent unperturbed interval.
+      IP = IPAIR
       CALL TPERT(IPAIR,GMIN,DT)
+      IPAIR = IP
 *
 *       Specify unperturbed motion (subject to DT > 0).
       K = 1 + INT(0.5D0*DT/TK)

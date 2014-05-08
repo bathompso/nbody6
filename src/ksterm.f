@@ -140,11 +140,14 @@
           RI = SQRT((X(1,ICM) - RDENS(1))**2 +
      &              (X(2,ICM) - RDENS(2))**2 +
      &              (X(3,ICM) - RDENS(3))**2)
+*       Include error of the bilinear relation (cf. Book Eqn.(4.30)).
+          ERR = U(4,IPAIR)*UDOT(1,IPAIR) - U(3,IPAIR)*UDOT(2,IPAIR) +
+     &          U(2,IPAIR)*UDOT(3,IPAIR) - U(1,IPAIR)*UDOT(4,IPAIR)
           WRITE (6,15)  TIME+TOFF, BODY(I1), BODY(I1+1), DTAU(IPAIR),
      &                  R(IPAIR), RI, H(IPAIR), IPAIR, GAMMA(IPAIR),
-     &                  STEP(I1), LIST(1,I1), LIST(1,ICM)
-   15     FORMAT (/,' END KSREG    TIME =',F8.2,2F8.4,F8.3,1PE10.1,
-     &                                  0PF7.2,F9.2,I5,F8.3,1PE10.1,2I5)
+     &                  STEP(I1), LIST(1,I1), LIST(1,ICM), ERR
+   15     FORMAT (/,' END KSREG    TIME =',F8.2,1P,2E9.1,0P,F6.3,1P,
+     &                E10.1,0P,F7.2,F9.2,I5,F8.3,1P,E10.1,2I5,1P,E10.2)
       END IF
 *
 *       Obtain global coordinates & velocities.
@@ -187,7 +190,8 @@
           RIJ2 = (X(1,ICM) - X(1,J))**2 + (X(2,ICM) - X(2,J))**2 +
      &                                    (X(3,ICM) - X(3,J))**2
 *       Ensure that at least the predicted neighbour number is reached.
-          IF (RIJ2.LT.RS2.OR.L + NBP.GT.NNB1 + NNB) THEN
+          IF (RIJ2.LT.RS2.OR.(NNB1 + NNB - L.LE.NBP.AND.
+     &        NNB1.LT.NNBMAX-1)) THEN
               NNB1 = NNB1 + 1
               ILIST(NNB1) = J
           END IF

@@ -6,7 +6,7 @@
 *
       INCLUDE 'common6.h'
       COMMON/GALAXY/ GMG,RG(3),VG(3),FG(3),FGD(3),TG,
-     &               OMEGA,DISK,A,B,V02,RL2
+     &               OMEGA,DISK,A,B,V02,RL2,GMB,AR,GAM,ZDUM(7)
 *
 *
 *       Check option for cluster in circular galactic orbit.
@@ -63,7 +63,9 @@
 *       Form total energy based on current values and ETIDE (cf. SCALE).
       ETOT = ZKIN - POT + ETIDE
       SX = E0/ETOT
+*       Exclude re-scaling for positive energy or binary Plummer cluster.
       IF (ETOT.GE.0.0) SX = 1.0
+      IF (KZ(5).EQ.2) SX = 1.0
 *
 *       Scale coordinates & velocities to yield ETOT = -0.25.
       DO 15 I = 1,N
@@ -127,15 +129,22 @@
    22     CONTINUE
    24 CONTINUE
 *
-*       Treat the general case of 3D orbit for point-mass, disk and/or halo.
+*       Treat the case of 3D orbit for point-mass, bulge, disk and/or halo.
       ELSE IF (KZ(14).EQ.3) THEN
 *
 *       Read all parameters (NB! Do not confuse with Oort's constants A, B).
-          READ (5,*)  GMG, DISK, A, B, VCIRC, RCIRC, (RG(K),K=1,3),
-     &                                               (VG(K),K=1,3)
+          READ (5,*)  GMG, DISK, A, B, VCIRC, RCIRC, GMB, AR, GAM,
+     &                ZDUM(1), ZDUM(2), ZDUM(3), ZDUM(4)
+*       Meaning of additional ZDUM parameters:
+*           ZDUM(1) = smoothing length of central point mass
+*           ZDUM(2) = NFW halo scale mass
+*           ZDUM(3) = NFW halo scale radius
+*           ZDUM(4) = halo flattening
+*       Gamma/eta model: GMB = mass, AR = scale radius, GAM = exponent.
+          READ (5,*)  (RG(K),K=1,3), (VG(K),K=1,3)
 *
 *       Specify planar motion from SEMI & ECC for no disk & halo if VZ = 0.
-          IF (DISK + VCIRC.EQ.0.0.AND.VG(3).EQ.0.0D0) THEN
+          IF (DISK+VCIRC+GMB+ZDUM(2).EQ.0.0.AND.VG(3).EQ.0.0D0) THEN
               RAP = RG(1)
               ECC = RG(2)
               SEMI = RAP/(1.0 + ECC)
@@ -160,13 +169,22 @@
           OMEGA = (RG(1)*VG(2) - RG(2)*VG(1))/R02
           TIDAL(4) = 2.0*OMEGA
           GMG = GMG/ZMTOT
-*       Adopt a tidal radius of 10 units unless specified by routine SCALE.
-          IF (RTIDE.EQ.0.0D0) RTIDE = 10.0
+          GMB = GMB/ZMTOT
+          AR = 1000.0*AR/RBAR
+          ZDUM(1) = 1000.0*ZDUM(1)/RBAR
 *
-          WRITE (6,35)  GMG, SQRT(R02), OMEGA, RTIDE, RBAR
-   35     FORMAT (/,12X,'POINT-MASS MODEL:    MG =',1P,E9.1,
-     &                  '  RG =',E9.1,'  OMEGA =',E9.1,
-     &                  '  RT =',0P,F6.2,'  RBAR =',F6.2)
+          IF (GMG.GT.0.0) THEN
+              WRITE (6,35)  GMG,ZDUM(1),SQRT(R02),OMEGA,RTIDE,RBAR
+   35         FORMAT (/,12X,'POINT-MASS MODEL:    GMG =',1P,E9.1,
+     &         '  SMOOTHING =',E9.1,'  RG =',E9.1,'  OMEGA =',E9.1,
+     &                      '  RT =',0P,F6.2,'  RBAR =',F6.2)
+          END IF
+          IF (GMB.GT.0.0D0) THEN
+              WRITE (6,36)  GMB, AR, GAM
+   36         FORMAT (/,12X,'GAMMA/ETA MODEL:    GMB =',1P,E9.1,
+     &                      '  AR =',E9.1,'  GAM =',E9.1)
+          END IF
+*
 *       Define disk and/or logarithmic halo parameters in N-body units.
           IF (DISK.GT.0.0D0) THEN
               DISK = DISK/ZMTOT
@@ -176,13 +194,28 @@
    40         FORMAT (/,12X,'DISK MODEL:    MD =',1P,E9.1,
      &                                   '  A =',E9.1,'  B =',E9.1)
           END IF
-*
+*       Include NFW halo in N-body units
+          IF (ZDUM(2).GT.0.0D0) THEN
+              ZDUM(2) = ZDUM(2)/ZMTOT
+              ZDUM(3) = 1000.0*ZDUM(3)/RBAR
+              WRITE (6,41)  ZDUM(2), ZDUM(3), ZDUM(4)
+   41         FORMAT (/,12X,'NFW HALO:    MNFW =',E9.1,
+     &                       '  RNFW =',E9.1,' QZ =',F7.2)
+        END IF
+
+
 *       Determine local halo velocity from total circular velocity.
-          IF (VCIRC.GT.0.0D0) THEN
+           IF (VCIRC.GT.0.0D0.AND.ZDUM(2).EQ.0.0D0) THEN
               VCIRC = VCIRC/VSTAR
               RCIRC = 1000.0*RCIRC/RBAR
+              A1 = SQRT(RCIRC**2 + (ZDUM(1))**2)
               A2 = RCIRC**2 + (A + B)**2
-              V02 = VCIRC**2 - (GMG/RCIRC + DISK*RCIRC**2/A2**1.5)
+              V02 = VCIRC**2 - (GMG/A1 + DISK*RCIRC**2/A2**1.5)
+*       Include any contribution from bulge potential (V2 = R*F).
+              IF (GMB.GT.0.0D0) THEN
+                  VB2 = GMB/RCIRC*(1.0 + AR/RCIRC)**(GAM-3.0)
+                  V02 = V02 - VB2
+              END IF
               IF (V02.LT.0.0D0) THEN
                   WRITE (6,45)  V02, 0.001*RCIRC*RBAR
    45             FORMAT (' ',' NEGATIVE HALO VELOCITY!    V02 RCIRC ',
@@ -200,8 +233,9 @@
               DO 60 K = 1,30
                   RI2 = RI**2
                   A2 = RI2 + (A + B)**2
-                  VCIRC2 = GMG/SQRT(RI2) + DISK*RI2/A2**1.5 +
-     &                                     V02*RI2/(RL2 + RI2)
+                  VB2 = GMB/RI*(1.0 + AR/RI)**(GAM-3.0)
+                  VCIRC2 = GMG/SQRT(RI2 + ZDUM(1)**2) +
+     &                DISK*RI2/A2**1.5 + V02*RI2/(RL2 + RI2) + VB2
                   WRITE (17,50)  SQRT(VCIRC2)*VSTAR, RI*RBAR/1000.0
    50             FORMAT (' CIRCULAR VELOCITY:    VC R ',F7.1,F7.2)
                   RI = RI + DR
@@ -209,30 +243,37 @@
               CALL FLUSH(17)
 *
               A2 = R02 + (A + B)**2
-              VCIRC2 = GMG/SQRT(R02) + DISK*R02/A2**1.5 +
-     &                                 V02*R02/(RL2 + R02)
+              VB2 = GMB/SQRT(R02)*(1.0 + AR/SQRT(R02))**(GAM-3.0)
+              VCIRC2 = GMG/SQRT(R02 + ZDUM(1)**2) +
+     &            DISK*R02/A2**1.5 + V02*R02/(RL2 + R02) + VB2
               VCIRC = SQRT(VCIRC2)*VSTAR
-              WRITE (6,62)  VCIRC, SQRT(R02)/1000.0, SQRT(RL2)/1000.0
-   62         FORMAT (/,12X,'CIRCULAR VELOCITY:    VC RG RL',F7.1,2F7.2)
+              WRITE (6,62)  VCIRC, SQRT(R02)/1000.0,
+     &                      SQRT(RL2)/1000.0, ZDUM(4)
+   62         FORMAT (/,12X,'CIRCULAR VELOCITY:    VC RG RL QZ',F7.1,
+     &                2F7.2, F7.2)
           ELSE
               V02 = 0.0
+              RL2 = 1.0
           END IF
 *
 *       Initialize F & FDOT of reference frame (point-mass galaxy is OK).
           CALL GCINIT
 *
+*       Form tidal radius from circular angular velocity (assumes apocentre).
+          IF (RTIDE.EQ.0.0D0) RTIDE = (0.3333/OMEGA**2)**0.3333
+*
           WRITE (6,65)  (RG(K),K=1,3), (VG(K),K=1,3), SQRT(V02)
-   65     FORMAT (/,12X,'SCALED ORBIT:    RG =',1P,3E10.2,
-     &                                '  VG = ',3E10.2,'  V0 =',0P,F6.1)
+   65     FORMAT (/,12X,'SCALED ORBIT:    RG = ',3F7.2,
+     &                                 '  VG = ',3F7.1,'  V0 =',F6.1)
       END IF
 *
-*       Include Plummer potential for 2D and 3D (set MP = 0 if not needed).
+*       Include Plummer potential for 2D and 3D (use MP = 0 if not needed).
       IF (KZ(14).EQ.3.OR.KZ(14).EQ.4) THEN
 *       Check input for Plummer potential.
           READ (5,*)  MP, AP2, MPDOT, TDELAY
           WRITE (6,70)  MP, AP2, MPDOT, TDELAY
    70     FORMAT (/,12X,'PLUMMER POTENTIAL:    MP =',F7.3,'  AP =',F6.2,
-     &                  '  MPDOT =',F7.3,'  TDELAY =',F5.1)
+     &                        '  MPDOT =',F7.3,'  TDELAY =',F5.1)
           MP0 = MP
           AP2 = AP2**2
 *       Rescale velocities by including the Plummer & galactic virial energy.
@@ -250,6 +291,7 @@
           IF (RTIDE.EQ.0.0D0) RTIDE = 10.0*RSCALE
       ELSE
           MP = 0.0
+          MPDOT = 0.0
       END IF
       RTIDE0 = RTIDE
 *

@@ -24,6 +24,12 @@
           D1R(K,I) = 0.0D0
    10 CONTINUE
 *
+*       Include exceptional case of no neighbours (bug fix 2/3/12).
+      IF (LIST(1,I).EQ.0) THEN
+          RS0 = RS(I)
+          CALL NBLIST(I,RS0)
+      END IF
+*
 *       Obtain force & first derivative by summing over all bodies.
       KDUM = 0
       NNB = LIST(1,I)

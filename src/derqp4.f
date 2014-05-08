@@ -17,11 +17,15 @@
       COMMON/CCOLL/  QK(12),PK(12),ICALL,ICOLL,NDISS4
       COMMON/BSSAVE/  EP(4),DSC,FACM,TFAC,ITFAC,JC
       COMMON/KSAVE/  K10,K20
-      EQUIVALENCE  (T11,TA(1)),(T22,TA(2)),(T33,TA(3)),(T12,TA(4)),
-     &             (T23,TA(5))
-*     EQUIVALENCE  (M12,MIJ(1)),(M23,MIJ(2)),(M34,MIJ(3)),
-*    &             (M13,MIJ(4)),(M24,MIJ(5)),(M14,MIJ(6))
+*     EQUIVALENCE  (T11,TA(1)),(T22,TA(2)),(T33,TA(3)),(T12,TA(4)),
+*    &             (T23,TA(5))
 *
+*       Copy old equivalence variables.
+      T11 = TA(1)
+      T22 = TA(2)
+      T33 = TA(3)
+      T12 = TA(4)
+      T23 = TA(5)
 *
       NFN = NFN + 1
       K = 0

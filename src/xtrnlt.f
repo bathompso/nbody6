@@ -6,7 +6,7 @@
 *
       INCLUDE 'common6.h'
       COMMON/GALAXY/ GMG,RG(3),VG(3),FG(3),FGD(3),TG,
-     &               OMEGA,DISK,A,B,V02,RL2
+     &               OMEGA,DISK,A,B,V02,RL2,GMB,AR,GAM,ZDUM(7)
       REAL*8  XI(3),XIDOT(3),FREG(3),FDR(3),FM(3),FMD(3)
 *
 *
@@ -21,6 +21,15 @@
    10         CONTINUE
           END IF
 *
+*       Check bulge force.
+      IF (GMB.GT.0.0D0) THEN
+          CALL FBULGE(XI,XIDOT,FM,FMD)
+          DO 15 K = 1,3
+              FREG(K) = FREG(K) + FM(K)
+              FDR(K) = FDR(K) + FMD(K)
+   15     CONTINUE
+      END IF
+*
 *       Include Miyamoto disk for positive disk mass.
           IF (DISK.GT.0.0D0) THEN
               CALL FDISK(XI,XIDOT,FM,FMD)
@@ -31,12 +40,21 @@
           END IF
 *
 *       Check addition of logarithmic halo potential to regular force.
-          IF (V02.GT.0.0D0) THEN
+          IF (V02.GT.0.0D0.AND.ZDUM(2).EQ.0.0D0) THEN
               CALL FHALO(XI,XIDOT,FM,FMD)
               DO 30 K = 1,3
                   FREG(K) = FREG(K) + FM(K)
                   FDR(K) = FDR(K) + FMD(K)
    30         CONTINUE
+          END IF
+*
+*       Check addition of NFW halo potential to regular force.
+          IF (ZDUM(2).GT.0.0D0) THEN
+              CALL FNFW(XI,XIDOT,FM,FMD)
+              DO 35 K = 1,3
+                  FREG(K) = FREG(K) + FM(K)
+                  FDR(K) = FDR(K) + FMD(K)
+35            CONTINUE
           END IF
       END IF
 *

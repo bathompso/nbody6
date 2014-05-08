@@ -14,9 +14,15 @@
       COMMON/IND6/  IND(6)
       COMMON/CLOSE/  RIJ(4,4),RCOLL,QPERI,SIZE(4),ECOLL3,IP(4)
       COMMON/CCOLL/  QK(12),PK(12),ICALL,ICOLL,NDISS4
-      EQUIVALENCE  (Y(1),P(1))
+*     EQUIVALENCE  (Y(1),P(1))
       SAVE
 *
+*
+      DO 3 I = 1,12
+          Y(I) = P(I)
+          Y(I+12) = Q(I)
+    3 CONTINUE
+      Y(25) = TIME4
 *
       IF (TIME4.GT.0.0D0) GO TO 5
       DO 1 J = 1,12
@@ -46,6 +52,11 @@
 *
 *       Advance the solution one step and order the distances.
           CALL DIFSY4(25,EPSI,DS,S,Y)
+          DO 10 I = 1,12
+              P(I) = Y(I)
+              Q(I) = Y(I+12)
+   10     CONTINUE
+          TIME4 = Y(25)
           NSTEP4 = NSTEP4 + 1
           CALL RSORT(R,SWITCH,IND)
 *

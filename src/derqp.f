@@ -19,6 +19,7 @@
       REAL*8  DQ(NMX4),DX(3),DP(NMX4),DV(3),FCM(3),UPR(NMX4)
       REAL*8  W(NMX4),AK(NMX4),DK(NMX),FNC(NMX3),FXTNL(NMX3)
       REAL*8  TP(NMX4),TQ(NMX4),UQ(NMX4),FAUX(4),AUX(-2:2),XAUX(3)
+      SAVE
 *
 *
 *       Mikkola & Aarseth 1990 eqs. (77) -> (80).

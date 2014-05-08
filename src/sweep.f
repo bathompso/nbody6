@@ -12,7 +12,7 @@
       ZMX = 100.0*BODYM
       I = IFIRST - 1
     1 I = I + 1
-      IF (I.GE.N.OR.NAME(I).LE.0) GO TO 30
+      IF (I.GT.N) GO TO 30
       IF (BODY(I).GT.ZMX) GO TO 2
       IF (STEP(I).GT.DTCL.OR.BODY(I).EQ.0.0D0) GO TO 1
     2 CONTINUE
@@ -32,6 +32,7 @@
               JMIN = J
           END IF
    10 CONTINUE
+*
 *       Skip any close c.m./chain body (small STEP treated by IMPACT).
       IF (JMIN.GT.N.OR.NAME(JMIN).LE.0) GO TO 1
 *
@@ -53,7 +54,7 @@
       IF (AINV.GT.1.0/RCL.OR.EREL.GT.ECLOSE) THEN
           ICOMP = MIN(I,JMIN)
           JCOMP = MAX(I,JMIN)
-*       Skip possible case of chain c.m. forming binary.
+*       Skip possible rare case of chain c.m. forming binary.
           IF (NAME(ICOMP).EQ.0.OR.NAME(JCOMP).EQ.0) GO TO 1
 *       Ensure most recent velocity used for new KS.
           DO 16 K = 1,3
@@ -79,9 +80,8 @@
      &                                2I7,I4,I5,F7.2,F8.3,1P,E10.2,E9.1)
           END IF
       END IF
-      IF (I.LT.N-2) GO TO 1
+      IF (I.LT.N) GO TO 1
 *
    30 RETURN
 *
       END
-

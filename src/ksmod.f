@@ -110,6 +110,9 @@
       KMOD = -1
       IPHASE = 0
 *
+*       Enforce new KSLIST after small perturbation (CHAOS/SPIRAL case).
+      IF (ISBIN.GE.6) KMOD = 0
+*
   100 RETURN
 *
       END

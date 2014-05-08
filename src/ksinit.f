@@ -109,7 +109,7 @@
 *
 *       Transform any unperturbed hard binary to apocentre and set time-step.
       SEMI = -0.5*BODY(NTOT)/H(IPAIR)
-      IF (LIST(1,ICOMP).EQ.0.AND.EB.LT.EBH) THEN
+      IF (LIST(1,ICOMP).EQ.0.AND.EB.LT.EBH.AND.SEMI.LT.RMIN) THEN
           TK = TWOPI*SEMI*SQRT(SEMI/BODY(NTOT))
 *       Note TIME is not commensurate after KSPERI (cf. CHTERM & STEPS).
           IF (IPHASE.NE.7.AND.IPHASE.NE.8) THEN
@@ -166,6 +166,7 @@
 *       Set 2*SEMI as termination scale for hard binary if 2*SEMI < RS/20.
       IF (EB.LT.EBH.AND.RAP.LT.0.05*RS(NTOT)) THEN 
           R0(IPAIR) = MAX(RMIN,-BODY(NTOT)/H(IPAIR))
+          R0(IPAIR) = MIN(R0(IPAIR),5.0*RMIN)
       ELSE
           R0(IPAIR) = R(IPAIR)
       END IF
@@ -192,10 +193,10 @@
 *       Limit the diagnostics to significant change or new case.
           ISUM = KSTAR(ICOMP) + KSTAR(JCOMP) + KSTAR(NTOT)
           DEB = ABS((EB - EBPREV)/EBPREV)
-          IF (ISUM.NE.IPREV.OR.DEB.GT.0.1) THEN
+          IF (ISUM.NE.IPREV.OR.DEB.GT.0.5) THEN
               IPREV = ISUM
               EBPREV = EB
-              PD = DAYS*SEMI*SQRT(SEMI/BODY(NTOT))
+              PD = DAYS*SEMI*SQRT(ABS(SEMI)/BODY(NTOT))
               WRITE (6,65)  TIME+TOFF, NAME(ICOMP), NAME(JCOMP),
      &                      KSTAR(ICOMP), KSTAR(JCOMP), KSTAR(NTOT),
      &                      SQRT(ECC2), PD, EB
@@ -245,7 +246,6 @@
       END IF
 *       Set flag to distinguish between existing and new binaries (K = -1/0).
       LIST(2,JCOMP) = K
-      KSLOW(IPAIR) = 1
 *
 *       Check diagnostic output of new hard binary.
       IF (KZ(8).GT.0.AND.K.EQ.0) THEN

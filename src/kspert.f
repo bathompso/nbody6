@@ -177,7 +177,7 @@
               RRDOT = RRDOT + (XI(K) - XI(K+3))*(VI(K) - VI(K+3))
    65     CONTINUE
           ZF = 1.0/RI2
-*       Write current mass inside RI as MP*R3*ZF^{3/3} (Heggie & Hut p.73).
+*       Write current mass inside RI as MP*R3*ZF^{3/2} (Heggie & Hut p.73).
           FMP = MP*ZF*SQRT(ZF)
           DO 70 K = 1,3
               XREL = XI(K) - XI(K+3)

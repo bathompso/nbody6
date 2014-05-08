@@ -208,7 +208,7 @@
    11     CONTINUE
 *
 *       Ensure rare case of massless remnant will escape at next output.
-         IF (KW1.EQ.15.OR.KW2.EQ.15) THEN
+          IF (KW1.EQ.15.OR.KW2.EQ.15) THEN
             CALL KSTERM
             IPHASE = -1
             I = IFIRST
@@ -239,7 +239,7 @@
 *       Evaluate binary disruption velocity and introduce velocity kick.
               VI2 = XDOT(1,I)**2 + XDOT(2,I)**2 + XDOT(3,I)**2
               KSTAR(I1) = -KSTAR(I1)
-              CALL KICK(IPAIR,0,KW1)
+              CALL KICK(IPAIR,0,KW1,DM)
 *
 *       Include potential and kinetic energy corrections due to mass loss.
               CALL POTI(I,POTJ)
@@ -284,7 +284,7 @@
 *       Terminate KS binary and assign kick velocity to single star #I.
               I = I1 + 2*(NPAIRS - IPAIR)
               CALL KSTERM
-              CALL KICK(I,1,KW1)
+              CALL KICK(I,1,KW1,DM)
 *       Initialize new KS polynomials after velocity kick (H > 0 is OK).
               ICOMP = IFIRST
               JCOMP = IFIRST + 1

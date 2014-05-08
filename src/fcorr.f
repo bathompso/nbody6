@@ -24,10 +24,10 @@
           IF (KW.EQ.12.AND.KZ(25).NE.2) IKICK = .FALSE.
 *       Distinguish between single star (first time only) and binary.
           IF (I.LE.N.AND.KW.NE.KSTAR(I).AND.IKICK) THEN
-              CALL KICK(I,1,KW)
+              CALL KICK(I,1,KW,DM)
           ELSE IF (I.GT.N.AND.IKICK) THEN
               IPAIR = I - N
-              CALL KICK(IPAIR,0,KW)
+              CALL KICK(IPAIR,0,KW,DM)
           END IF
       ELSE
           IKICK = .FALSE.

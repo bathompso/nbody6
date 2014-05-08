@@ -41,6 +41,12 @@
           CALL XTRNL0
       END IF 
 *
+*      Rescale time scales to astrophysical units (Myr)
+      DTADJ = DTADJ/TSCALE
+      DELTAT = DELTAT/TSCALE
+      DTPLOT = DTPLOT/TSCALE
+      TCRIT = TCRIT/TSCALE
+*
 *       Check optional scaling to hot system.
       IF (KZ(29).GT.0) THEN
           CALL HOTSYS
@@ -144,18 +150,24 @@
                   JCOMP = J
               END IF
    70     CONTINUE
+          IF (SQRT(RX2).GT.RMIN) THEN
+              KSPAIR = KSPAIR + 1
+              IF (KSPAIR.GT.NPAIRS) GO TO 80
+              GO TO 60
+          END IF
 *       Evaluate PCRIT for R0(NPAIRS) in MERGE since IMPACT is bypassed.
           CALL HISTAB(KSPAIR,JCOMP,PMIN,RSTAB)
 *       Initialize the triple (constructed to be stable in HIPOP).
           IPHASE = 6
           CALL MERGE
+*       Examine the same ICM (moved up after successful MERGE).
           IF (NMERGE.LT.NHI0) THEN
               GO TO 60
           END IF
       END IF
 *
 *       Check the average neighbour number.
-      ZNB = FLOAT(NNB0)/FLOAT(N)
+   80 ZNB = FLOAT(NNB0)/FLOAT(N)
       IF (ZNB.LT.0.25*ZNBMAX.OR.ZNB.LT.0.25*SQRT(FLOAT(N))) THEN
           WRITE (6,90)  ZNB
    90     FORMAT (/,12X,'WARNING!   SMALL NEIGHBOUR NUMBERS   <NNB> =',

@@ -22,10 +22,7 @@
       I1 = 2*IPAIR - 1
       I2 = I1 + 1
       NTTRY = NTTRY + 1
-      PERT1 = 0.0
-      PERT2 = 0.0
       JCOMP = IFIRST
-      NP = 0
       KS2 = 0
       RMAX2 = 1.0
       TTOT = TIME + TOFF
@@ -38,11 +35,16 @@
       NNB2 = LIST(1,J1) + 1
 *
 *       Find the dominant body (JCOMP) and nearest perturber (JMAX).
+      RCRIT2 = 1.0D+04*RMIN2
+      ITER = 0
+    5 PERT1 = 0.0
+      PERT2 = 0.0
+      NP = 0
       DO 10 L = 2,NNB2
           J = LIST(L,J1)
           RIJ2 = (X(1,I) - X(1,J))**2 + (X(2,I) - X(2,J))**2 +
      &                                  (X(3,I) - X(3,J))**2
-          IF (J1.EQ.I.AND.RIJ2.GT.1.0D+04*RMIN2) GO TO 10
+          IF (J1.EQ.I.AND.RIJ2.GT.RCRIT2) GO TO 10
           NP = NP + 1
           JLIST(NP) = J
           PERT = BODY(J)/(RIJ2*SQRT(RIJ2))
@@ -61,13 +63,11 @@
           END IF
    10 CONTINUE
 *
-*       Include safety check if no perturbers or neighbours inside 100*RMIN.
-      IF (NP.EQ.0) THEN
-          JCOMP = LIST(2,I)
-          RJMIN2 = 1.0
-          JMAX = LIST(3,I)
-      ELSE IF (NP.EQ.1) THEN
-          JMAX = N
+*       Perform an iteration to ensure at least two perturbers (< 10 times).
+      IF (NP.LT.2) THEN
+          RCRIT2 = 4.0*RCRIT2
+          ITER = ITER + 1
+          IF (ITER.LT.10) GO TO 5
       END IF
 *
       RDOT = (X(1,I) - X(1,JCOMP))*(XDOT(1,I) - XDOT(1,JCOMP)) +
@@ -160,7 +160,7 @@
       IF(ABS(EB).LT.1.0D-10) EB = -1.0D-10
       EB1 = -0.5*BODY(JCOMP)*BODY(I)/SEMI1
 *
-*       Obtain the total perturbing force acting on body #I & JCOMP.
+*       Obtain the perturbing force on body #I & JCOMP (note the skip).
       CALL FPERT(I,JCOMP,NP,PERT)
 *
 *       Choose maximum of dominant scalar & total vectorial perturbation.
@@ -295,7 +295,7 @@
      &                  BODY(I), BODY(JCOMP), PERT4, RIJ, PMIN,
      &                  EB1/EB, LIST(1,I1)
    20     FORMAT (/,' NEW',A8,I4,'  T =',F8.2,'  H =',F6.0,
-     &              '  R =',1P,E8.1,'  M =',0P,2F7.4,'  G4 =',1P,E8.1,
+     &              '  R =',1P,E8.1,'  M =',2E8.1,'  G4 =',1P,E8.1,
      &              '  R1 =',E8.1,'  P =',E8.1,'  E1 =',0P,F6.3,
      &              '  NP =',I2)
           CALL FLUSH(3)
@@ -339,11 +339,15 @@
               END IF
 *       Check reduction of c.m. index (JPAIR becomes JPAIR - 1 if > IPAIR).
               IF (JPAIR.GT.IPAIR) JCLOSE = JCLOSE - 1
-              IF (KZ(26).LT.2) THEN
+*       Include extra condition for inert binary approximation (9/3/12).
+              IF (KZ(26).LT.2.AND.RIJ.GT.250.0*SEMI0) THEN
 *       Replace unperturbed near-synchronous binary by inert body in CHAIN.
                   JCOMP = 0
                   WRITE (6,25)  SEMI0, RIJ, R(JPAIR), GAMMA(JPAIR)
    25             FORMAT (' INERT BINARY    A RIJ R G ',1P,4E10.2)
+*       Note compact binary may end up as KS if another component escapes.
+              ELSE
+                  JCLOSE = 0
               END IF
           ELSE
               JCLOSE = 0
@@ -482,13 +486,6 @@
           GO TO 100
       END IF
 *
-*       Estimate the relative apocentre perturbations on body #I & JCOMP.
-      IF (ECC1.LT.0.95) THEN
-          PERT = PERT*(RA/RIJ)**3
-      ELSE
-          PERT = PERT*(ABS(SEMI1)/RIJ)**3
-      END IF
-*
 *       Check tidal capture option (synchronous or evolving binary orbit).
       IF (KZ(27).GT.0) THEN
 *       Skip merger if outer component would suffer tidal dissipation.
@@ -552,7 +549,7 @@
 *
 *       Estimate relative perturbation at apocentre from actual value.
       GI = PERT*(SEMI1*(1.0 + ECC1)/RIJ)**3
-      IF (PERT.GT.GMAX.OR.GI.GT.0.05) GO TO 100
+      IF (PERT.GT.GMAX.OR.GI.GT.0.02) GO TO 100
 *
 *       Switch to direct integration for planetary systems if GI > 1D-04.
       IF (MIN(BODY(I1),BODY(I2)).LT.0.05*BODYM) THEN
@@ -664,7 +661,7 @@
 *         IF (PCRIT.GT.2.0*PMIN) GO TO 100
 *     END IF
 *
-*       Evaluate the general stability function (Mardling MNRAS, 2008).
+*       Evaluate the general stability function (Mardling 2008).
       IF (ECC1.LT.1.0.AND.YFAC.LT.1.02) THEN
           BJ = BODY(JCOMP)
           EOUT = ECC1
@@ -672,8 +669,21 @@
           IF (EOUT.GT.0.8) THEN
               DE = 0.5*(1.0 - EOUT)
               DE = MIN(DE,0.01D0)
-*       Allow extra tolerance after 1000 tries.
-              IF (NMTRY.GE.1000) DE = MIN(1.0D0 - EOUT,0.02D0)
+*       Evaluate outer eccentricity derivative due to dominant perturber.
+              IF (JMAX.NE.JCOMP.AND.PERT.GT.GMIN) THEN
+                  CALL EDOT(I,JCOMP,JMAX,SEMI1,ECC1,ECCDOT)
+*       Include a small effect of positive derivative over 10 orbits.
+                  IF (ECCDOT.GT.0.0) THEN
+                      TK1 = TWOPI*SEMI1*
+     &                      SQRT(SEMI1/(BODY(I) + BODY(JCOMP)))
+                      DE = DE - 10.0*MIN(ECCDOT*TK1,0.001D0)
+*                     WRITE (6,443)  ECC1, DE, ECCDOT, TK1, PERT
+* 443                 FORMAT (' EDOT!!    E1 DE ED TK G ',
+*    &                                    2F9.5,1P,3E9.1)
+                  END IF
+              END IF
+*       Allow extra tolerance after 1000 tries (suppressed 9/3/12).
+*             IF (NMTRY.GE.1000) DE = MIN(1.0D0 - EOUT,0.02D0)
               EOUT = EOUT - DE
               PMIN = SEMI1*(1.0 - EOUT)
           END IF

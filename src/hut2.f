@@ -40,7 +40,7 @@
         ITER = ITER + 1
         IF (IFLAG.EQ.0.AND.ITER.LT.NSTEPS) GO TO 6
 
-   10   spin1=u(1)
+        spin1=u(1)
 	spin2=u(2)
 
 	end

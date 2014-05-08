@@ -5,7 +5,7 @@
 *       ---------------------------------------
 *
       IMPLICIT REAL*8  (A-H,O-Z)
-      REAL*8  M,MIJ,M12,M23,M34,M13,M24,M14
+      REAL*8  M,MIJ
       LOGICAL  SWITCH,GTYPE,GTYPE0
       COMMON/CREG/  M(4),X(12),XD(12),P(12),Q(12),TIME4,ENERGY,EPSR2,
      &              XR(9),W(9),R(6),TA(6),MIJ(6),CM(10),RMAX4,TMAX,
@@ -13,10 +13,6 @@
       COMMON/TPR/   SWITCH,GTYPE,GTYPE0
       COMMON/SAVEP/  PI(12)
       COMMON/ICONF/  I1,I2,I3,I4
-      EQUIVALENCE  (T11,TA(1)),(T22,TA(2)),(T33,TA(3)),(T12,TA(4)),
-     &             (T23,TA(5))
-      EQUIVALENCE  (M12,MIJ(1)),(M23,MIJ(2)),(M34,MIJ(3)),
-     &             (M13,MIJ(4)),(M24,MIJ(5)),(M14,MIJ(6))
 *
 *
 *       Set physical momenta unless switching case (with PI in COMMON).
@@ -78,17 +74,17 @@
     7 CONTINUE
 *
 *       Set mass factors (note scaling by 0.25 for DERQP4).
-      T11 = 0.25D0*(.5D0/M(I1) + .5D0/M(I2))
-      T22 = 0.25D0*(.5D0/M(I2) + .5D0/M(I3))
-      T33 = 0.25D0*(.5D0/M(I3) + .5D0/M(I4))
-      T12 = -0.25D0/M(I2)
-      T23 = -0.25D0/M(I3)
-      M12 = M(I1)*M(I2)
-      M23 = M(I2)*M(I3)
-      M34 = M(I3)*M(I4)
-      M13 = M(I1)*M(I3)
-      M24 = M(I2)*M(I4)
-      M14 = M(I1)*M(I4)
+      TA(1) = 0.25D0*(.5D0/M(I1) + .5D0/M(I2))
+      TA(2) = 0.25D0*(.5D0/M(I2) + .5D0/M(I3))
+      TA(3) = 0.25D0*(.5D0/M(I3) + .5D0/M(I4))
+      TA(4) = -0.25D0/M(I2)
+      TA(5) = -0.25D0/M(I3)
+      MIJ(1) = M(I1)*M(I2)
+      MIJ(2) = M(I2)*M(I3)
+      MIJ(3) = M(I3)*M(I4)
+      MIJ(4) = M(I1)*M(I3)
+      MIJ(5) = M(I2)*M(I4)
+      MIJ(6) = M(I1)*M(I4)
 *
       RETURN
 *

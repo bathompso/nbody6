@@ -30,7 +30,8 @@
           IF (SEMI.GT.0.0D0.AND.R(IPAIR).GT.SEMI) THEN
               RAP = SEMI*(1.0 + ECC)
           ELSE
-              RAP = MAX(ZFAC*RMIN,R(IPAIR))
+*       Accept separation limit for hyperbolic cases.
+              RAP = MAX(ZFAC*SEMI,R(IPAIR))
           END IF
 *       Ensure extra perturbers at new regularizations (R may be small).
           IF (IPHASE.GT.0.AND.SEMI.GT.0.0) THEN
@@ -38,10 +39,16 @@
           END IF
       END IF
 *
+*       Restrict perturber selection for massive eccentric binary.
+      IF (BODY(I).GT.100.0*BODYM.AND.
+     &   (R(IPAIR).LT.0.1*SEMI.OR.SEMI.LT.0)) THEN
+          RAP = MIN(RMIN,0.1*ABS(SEMI))
+      END IF
+*
       RCRIT2 = 2.0*RAP**2/BODY(I)
       RCRIT3 = RCRIT2*RAP/GMIN
-*       Base fast search on maximum binary mass (2*BODY1).
-      RCRIT2 = 2.0*RCRIT2*BODY1*CMSEP2
+*       Base fast search on maximum binary mass (BODY1).
+      RCRIT2 = RCRIT2*BODY1*CMSEP2
 *
 *       Select new perturbers from the neighbour list.
     6 NNB1 = 1
@@ -61,7 +68,7 @@
                   LIST(NNB1,I1) = J
               ELSE IF (J.GT.N) THEN
 *       Employ a more generous criterion for possible wide binary.
-                  RJ = MIN(RMIN,-BODY(J)/H(J-N))
+                  RJ = MIN(10.0*ABS(SEMI),-BODY(J)/H(J-N))
                   IF (RSEP2.LT.CMSEP2*RJ**2) THEN
                       NNB1 = NNB1 + 1
                       LIST(NNB1,I1) = J
@@ -87,9 +94,6 @@
               LIST(2,I1) = LIST(2,I)
               GO TO 20
           END IF
-*       Retain the previous perturber after partial reflection.
-*         IF (TDOT2(IPAIR).GT.0.0D0.AND.KZ(25).GT.0) THEN
-*             NNB1 = 2
 *         ELSE IF (KZ(27).LE.0) THEN
           IF (KZ(27).LE.0) THEN
 *       Specify one unperturbed period at apocentre (NB! check STEP(I)).

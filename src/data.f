@@ -8,6 +8,10 @@
       REAL*8  RAN2
 *
 *
+      character*80 fname,dname,ddir
+      integer ld,ldd,type
+      common /fnm/ ld,ldd,dname,ddir
+*
 *       Initialize the portable random number generator (range: 0 to 1).
       KDUM = -1
       RN1 = RAN2(KDUM)
@@ -34,25 +38,32 @@
           CALL zcnsts(ZMET,ZPARS)
           WRITE (6,4)  ZPARS(11), ZPARS(12), ZMET
     4     FORMAT (//,12X,'ABUNDANCES:  X =',F6.3,'  Y =',F6.3,
-     &                                           '  Z =',F6.3)
+     &                                           '  Z =',F7.4)
       END IF
 *
-*       Check option for reading initial conditions from input file.
+*       Check options for reading initial conditions from input file.
       IF (KZ(22).GE.2.OR.KZ(22).EQ.-1) THEN
+          fname=dname
+          write(fname(ld+1:ld+6),'(a6)') '.NBODY'
+          write(*,'(/a,a)')'Reading input from: ',fname
+          open (unit=10,file=fname,form='formatted')
           ZMASS = 0.0
           DO 5 I = 1,N
               READ (10,*)  BODY(I), (X(K,I),K=1,3), (XDOT(K,I),K=1,3)
               ZMASS = ZMASS + BODY(I)
     5     CONTINUE
+          close(10)
+          go to 40
+*
 *       Include possibility of a new IMF via option #20.
           IF (KZ(22).GT.2.OR.KZ(22).EQ.-1) GO TO 50
       END IF
 *
 *       Include optional initial conditions on #10 in astrophysical units.
-*     IF (KZ(22).EQ.-1) THEN
-*         CALL SETUP2
-*         GO TO 30
-*     END IF
+      IF (KZ(22).EQ.-1) THEN
+          CALL SETUP2
+          GO TO 30
+      END IF
 *
 *       Include the case of equal masses (ALPHAS = 1 or BODY1 = BODYN).
       IF (ALPHAS.EQ.1.0.OR.BODY1.EQ.BODYN) THEN
@@ -72,6 +83,8 @@
           CALL IMF2(BODY1,BODYN)
           GO TO 30
       END IF
+*       Assign #20 = 0 for no new IMF and no scaling with input on fort.10.
+      IF (KZ(22).EQ.2.AND.KZ(20).EQ.0) GO TO 50
 *
       WRITE (6,15)  ALPHAS, BODY1, BODYN
    15 FORMAT (/,12X,'STANDARD IMF    ALPHAS =',F5.2,

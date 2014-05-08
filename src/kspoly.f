@@ -16,6 +16,8 @@
       I1 = I2 - 1
       NNB1 = LIST(1,I1) + 1
       SEMI = -0.5*BODY(I)/H(IPAIR)
+*       Save new slow-down index (note direct CALL KSPOLY).
+      KSLOW(IPAIR) = IMOD
 *
 *       Predict current coordinates & velocities of the perturbers.
       DO 5 L = 2,NNB1

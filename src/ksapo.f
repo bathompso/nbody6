@@ -15,6 +15,7 @@
       ELSE
           THETA = 0.5*TWOPI*RAN2(IDUM1)
           IPAIR = -IPAIR
+*       Note new type not known here but WD case kick decided by option #25.
           IKICK = 1
           IF (LIST(1,2*IPAIR-1).GT.0) THETA = 0.0D0
 *       Initialize time because HDOT & TDOT2 not updated for RESOLV.
@@ -54,7 +55,7 @@
 *
 *       Save KS parameters for WD or neutron star kick (routine FCORR).
    30 IF (IKICK.GT.0) THEN
-          CALL KICK(IPAIR,0,0)
+          CALL KICK(IPAIR,0,0,0.0D0)
       END IF
 *
       RETURN

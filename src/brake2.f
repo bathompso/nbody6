@@ -125,8 +125,14 @@
 *
 *       Convert from cgs to scaled units and update semi-major axis.
       ADOT = ADOT/(1.0D+05*VSTAR)
-      SEMI1 = SEMI - ADOT*DT
+      IF (ADOT*DT.GT.0.1*SEMI) THEN
+          SEMI1 = 0.9*SEMI
+      ELSE
+          SEMI1 = SEMI - ADOT*DT
+      END IF
 *
+      WRITE (6,71)  SEMI, SEMI1, ADOT, DT
+   71 FORMAT (' BRAKE2 !!    A A1 AD DT  ',1P,4E10.2)
 *       Include safety test on new semi-major axis.
       IF (ABS(SEMI1).LT.RADIUS(J2).OR.SEMI1.LT.0.0) THEN
           SEMI1 = RADIUS(J2)

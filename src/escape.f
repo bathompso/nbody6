@@ -8,6 +8,7 @@
       COMMON/BINARY/  CM(4,MMAX),XREL(3,MMAX),VREL(3,MMAX),
      &                HM(MMAX),UM(4,MMAX),UMDOT(4,MMAX),TMDIS(MMAX),
      &                NAMEM(MMAX),NAMEG(MMAX),KSTARM(MMAX),IFLAG(MMAX)
+      COMMON /ECHAIN/ ECH
       CHARACTER*11  WHICH1
       LOGICAL  FIRST
       SAVE  FIRST
@@ -15,7 +16,7 @@
 *
 *
 *       Adopt twice the tidal radius as escape condition.
-      RESC2 = 4.0*RTIDE**2
+      RESC2 = 9.0*RTIDE**2
       RTIDE2 = RTIDE**2
       NCORR = 0
       NCRIT1 = 0
@@ -128,6 +129,15 @@
       JLIST(NCORR) = NAME(I)
       NAMEI = NAME(I)
       KSTARI = KSTAR(I)
+*       Include termination for escaping chain c.m. system (mainly NBODY7).
+      IF (NAME(I).EQ.0) THEN
+          NSUB = MAX(NSUB - 1,0)
+          NCH = 0
+          WRITE (6,42)  ECH, EI
+   42     FORMAT (' CHAIN ESCAPE!!!!!    ECH EI  ',2F10.6)
+          ECOLL = ECOLL + ECH
+          ECH = 0.0
+      END IF
       IF (NAME(I).LT.0) KSTARI = KSTARI + 30
       IF (BODY(I).LE.0.0D0) GO TO 50
 *

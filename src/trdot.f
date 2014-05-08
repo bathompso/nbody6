@@ -33,7 +33,10 @@
 ***
 *
 *       Base new time scale for changes in radius & mass on stellar type.
-      if(kw.le.1)then
+      if(kw.lt.0)then
+         dtm = pts1*tscls(15)
+         dtr = ABS(age)
+      elseif(kw.le.1)then
          dtm = pts1*tm
          dtr = tm - age
       elseif(kw.ge.10)then
@@ -121,8 +124,8 @@
       it = it + 1
       if(it.eq.20.and.kw.eq.4) goto 30
       IF(IT.GT.30)THEN
-         WRITE (6,22) IT, KSTAR(I), M0, DR, RM0
-   22    FORMAT (' DANGER!    TRDOT: IT K* M0 DR RM0 ',2I4,1P,3E10.2)
+         WRITE (6,22) IT, KSTAR(I), M0, DR, RM
+   22    FORMAT (' DANGER!    TRDOT: IT K* M0 DR RM ',2I4,1P,3E10.2)
          goto 30
       ENDIF
       if(ABS(dr).gt.0.1*rm0)then

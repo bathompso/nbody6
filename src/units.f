@@ -54,9 +54,11 @@
           WRITE (6,20)  VSTAR, CLIGHT, RZ
    20     FORMAT (/,12X,'GR SCALING:    V* =',1P,E10.2,'  C =',E10.2,
      &                                  '  RZ =',E10.2)
+      ELSE
+          RZ = 0.0
+          CLIGHT = 0.0
       END IF
 *
       RETURN
 *
       END
-

@@ -209,7 +209,7 @@
           EB1 = EB1/ENERGY
           WRITE (6,20)  NAMEC(I1), NAMEC(I2), SEMI, ECC, EB, GB, G4,
      &                  EB1, E1, ET, DB
-   20     FORMAT (' CHAIN BINARY','  NAM =',2I6,'  A =',1P,E8.1,
+   20     FORMAT (' CHAIN RECOIL','  NAM =',2I6,'  A =',1P,E8.1,
      &            '  E =',0P,F5.2,'  EB =',F5.2,'  GB =',1P,E8.1,
      &            '  G4 =',E8.1,'  EB1 =',0P,F5.2,'  E1 =',F5.2,
      &            '  ET =',F6.3,'  DB =',F5.1)

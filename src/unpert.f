@@ -64,7 +64,7 @@
           CALL KSLIST(IPAIR)
           IF (LIST(1,I1).GT.0) THEN
 *       Transform to apocentre variables in case of tidal dissipation.
-              IF (R(IPAIR).LT.SEMI) THEN
+              IF (R(IPAIR).LT.SEMI.AND.SEMI.LT.5.0*RMIN) THEN
                   NP = LIST(1,I1)
                   LIST(1,I1) = 0
 *       Do not allow backwards integration on switch from unperturbed motion.

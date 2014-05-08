@@ -142,7 +142,7 @@
       IF (DISP.GT.0.0D0) DISP = SQRT(DISP/FLOAT(NPAIRS))
       EMAX = SQRT(EMAX)
       WRITE (6,65)  DISP, EMAX, (NPOP(J),J=1,8), (JEB(K),K=1,KLAST)
-   65 FORMAT (' <E> =',F5.2,'  EMAX =',F7.4,'  NPOP =',I5,I3,2I6,I4,3I3,
+   65 FORMAT (' <E> =',F5.2,'  EMAX =',F7.4,'  NPOP =',I5,I5,2I6,I4,3I3,
      &                                                 '  EB/KT =',14I4)
 *
 *       Form the basic internal energy (binaries & single particles).

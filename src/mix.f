@@ -1,8 +1,9 @@
-***
       SUBROUTINE MIX(J1,J2,DM)
 *
 *     Author : J. R. Hurley
 *     Date :   7th July 1998
+*     
+*     Updated by A. D. Railton 23th Feb 2011 to include preMS evolution.
 *
 *       Evolution parameters for mixed star.
 *       ------------------------------------
@@ -11,9 +12,11 @@
 *
       REAL*8 TSCLS(20),LUMS(10),GB(10),TMS1,TMS2,TMS3,TN
       REAL*8 M01,M02,M03,M1,M2,M3,AGE1,AGE2,AGE3,MC3,LUM,RM,RCC
+      REAL*8 RR,MF,RZAMS,TPREMS,LEFT,RIGHT,ERR,XX
       REAL*8 MENV,RENV,K2E
       REAL*8 MCH,MXNS
-      PARAMETER(MCH=1.44D0,MXNS = 3.0d0)
+      PARAMETER(MCH=1.44D0,MXNS=3.0d0,ERR=1D-5)
+      EXTERNAL RZAMSF,PREMSF
       LOGICAL  FIRST
       SAVE  FIRST
       DATA  FIRST /.TRUE./
@@ -36,7 +39,17 @@
 *       Specify case index for collision treatment.
       K1 = KSTAR(I1)
       K2 = KSTAR(I2)
-      ICASE = KTYPE(K1,K2)
+*       PreMS collision scheme: -1, -1 ==> -1; -1, 0 ==> -1; -1, x ==> x.
+      IF (K1.LT.0.OR.K2.LT.0) THEN
+          ICASE = -1
+          IF (MAX(K1,K2).GT.0) THEN
+             ICASE = MAX(K1,K2)
+             IF (K1 .EQ. -1) EPOCH(I1) = TIME*TSTAR
+             IF (K2 .EQ. -1) EPOCH(I2) = TIME*TSTAR
+          END IF
+      ELSE
+          ICASE = KTYPE(K1,K2)
+      END IF
       IF(ICASE.GT.100)THEN
          WRITE(38,*)' MIX ERROR ICASE>100 ',ICASE,K1,K2
       ENDIF
@@ -58,10 +71,7 @@
 *
 *       Evolve the stars to the current time unless they have been
 *       evolved further by recent Roche interaction.
-*     TEV1 = MAX(TIME,TEV0(I1))
-*       Update the stars to the latest previous time.
-      TEV1 = MAX(TEV0(I1),TEV0(I2))
-*
+      TEV1 = MAX(TIME,TEV0(I1))
 *       Determine evolution time scales for first star.
       M01 = BODY0(I1)*ZMBAR
       M1 = BODY(I1)*ZMBAR
@@ -116,7 +126,7 @@
           RDOT = RDOT + (X(K,I1) - X(K,I2))*(XDOT(K,I1) - XDOT(K,I2))
    50 CONTINUE
       RIJ = SQRT(RIJ2)
-*      Form binding energy of secondary and orbital kinetic energy.
+*       Form binding energy of secondary and orbital kinetic energy.
       EB = -0.5*6.68D-08*4.0D+66*M2**2/(RADIUS(I2)*SU*7.0D+10)
       ZMU = SMU*BODY(I1)*BODY(I2)/(BODY(I1) + BODY(I2))
       ZKE = 0.5*2.0D+33*ZMU*1.0D+10*VIJ2*VSTAR**2
@@ -136,7 +146,63 @@
 *
 *       Evaluate apparent age and other parameters.
 *
-      IF(ICASE.EQ.1)THEN
+      IF (ICASE.EQ.-1) THEN
+*       Collisions between -1 and -1/0 stars.
+         MF = 0.1 
+         M3 = (1.0 - MF)*(M1 + M2)
+         DM = M1 + M2 - M3
+*       Treat case that collided star is greater than 8 solar masses.
+*        -> start on ZAMS.   
+         IF(M3.GT.8.D0)THEN
+            AGE3 = 0.0D0
+         ELSE
+*       From internal energy arguments, treating both stars as
+*       n = 3/2 polytropes, get new radius:
+         RR = M03**2*(1.0-MF)*2.33333
+         RR = RR/(M1*M1/RS1 + M2*M2/RS2)*(3.0 - 4.0*MF)
+*       Define the preMS variables.
+         TPREMS = 10d0**(43.628d0-(35.835d0*M3**1.5029d-2)
+     &            *exp(M3*3.9608d-3))
+         RZAMS = RZAMSF(M3)
+*
+*       Do bisection on the function PREMSR to find the time at
+*       which the preMS star is at this radius.
+*
+         IC = 0
+         LEFT = 0
+         RIGHT = 1
+*       Make sure new radius is in right range.
+         IF(RR.LE.RZAMS)THEN
+            XX=0
+            IF(M3.LT.1.25) KW = 0
+            IF(M3.GE.1.25) KW = 1
+            GOTO 103
+         ENDIF
+         XX = 1D0
+         IF(PREMSF(M3,XX,RR).LE.0D0)THEN
+            XX=1D0
+            GOTO 103
+         ENDIF      
+*
+ 101     XX=0.5*(LEFT + RIGHT)
+         IC = IC + 1
+         IF (IC.GT.100) STOP
+         IF(ABS(PREMSF(M3,XX,RR)).LE.ERR)GOTO 103
+         IF(ABS(PREMSF(M3,XX,RR)).GT.ERR)GOTO 102
+*
+ 102     IF(SIGN(1.D0,PREMSF(M3,XX,RR)).EQ.
+     &        SIGN(1.D0,PREMSF(M3,LEFT,RR)))LEFT=XX
+         IF(SIGN(1.D0,PREMSF(M3,XX,RR)).EQ.
+     &        SIGN(1.D0,PREMSF(M3,RIGHT,RR)))RIGHT=XX
+         GOTO 101
+*     
+ 103     AGE3 = -TPREMS*XX            
+         END IF
+      IF (M3.GT.2.0) WRITE (6,720)  M3, RZAMS, XX, TPREMS, AGE3
+  720 FORMAT (' WATCH!   M3 RZAMS XX TP AGE3 ',F7.2,1P,4E10.2)
+         CALL star(KW,M3,M3,TMS3,TN,TSCLS,LUMS,GB,ZPARS)
+*     
+      ELSE IF(ICASE.EQ.1)THEN
 *       Specify new age based on complete mixing.
          IF(K1.EQ.7) KW = 7
          CALL star(KW,M03,M3,TMS3,TN,TSCLS,LUMS,GB,ZPARS)
@@ -275,7 +341,7 @@
           RIJ2 = RIJ2 + (X(K,I1) - X(K,I2))**2
           VIJ2 = VIJ2 + (XDOT(K,I1) - XDOT(K,I2))**2
    30 CONTINUE
-      RI = SQRT(RI2)/RC
+      RI = SQRT(RI2)
       RIJ = SQRT(RIJ2)
       SEMI = 2.d0/RIJ - VIJ2/ZMB
       SEMI = 1.d0/SEMI

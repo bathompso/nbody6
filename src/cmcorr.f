@@ -26,6 +26,11 @@
           CMRDOT(K) = CMRDOT(K)/ZMASS
    30 CONTINUE
 *
+*       Include effect of c.m. motion in Plummer potential.
+      IF (KZ(14).EQ.4) THEN
+          CALL PLPOT1(PHI1)
+      END IF
+*
 *       Apply c.m. corrections to X & XDOT and accumulate energy changes.
       ERRX = 0.0D0
       ERRV = 0.0D0
@@ -35,6 +40,7 @@
               VI2 = XDOT(K,I)**2
               X(K,I) = X(K,I) - CMR(K)
               XDOT(K,I) = XDOT(K,I) - CMRDOT(K)
+*       Note TIDAL(K) = 0 for KZ(14) = 3, hence no skip on ERRX is needed.
               ERRX = ERRX - TIDAL(K)*BODY(I)*(X(K,I)**2 - XI2)
               ERRV = ERRV + BODY(I)*(XDOT(K,I)**2 - VI2)
    35     CONTINUE
@@ -92,6 +98,12 @@
               XDOT(K,I) = X0DOT(K,I)
    65     CONTINUE
    70 CONTINUE
+*
+*       Check differential correction for Plummer potential.
+      IF (KZ(14).EQ.4) THEN
+          CALL PLPOT1(PHI2)
+          EMDOT = EMDOT + (PHI1 - PHI2)
+      END IF
 *
 *       Ensure consistent coordinates & velocities for binary components.
       DO 80 IPAIR = 1,NPAIRS

@@ -135,7 +135,14 @@
           END IF
 *       Include mass loss by gas expulsion (Kroupa et al. MN 321, 699).
           IF (MPDOT.GT.0.0D0.AND.TIME + TOFF.GT.TDELAY) THEN
+              CALL PLPOT1(PHI1)
               MP = MP0/(1.0 + MPDOT*(TIME + TOFF - TDELAY))
+*       Replace by exponential mass loss for faster decrease.
+*             DT = TIME + TOFF - TDELAY
+*             MP = MP0*EXP(-MPDOT*DT)
+              CALL PLPOT1(PHI2)
+*       Add differential correction for energy conservation.
+              EMDOT = EMDOT + (PHI1 - PHI2)
           END IF
       END IF
 *

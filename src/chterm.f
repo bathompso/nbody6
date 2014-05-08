@@ -120,12 +120,23 @@
 *
 *       Copy final coordinates & velocities to standard variables.
       LK = 0
+      RX2 = 0.0
       DO 20 L = 1,NCH
+          RI2 = 0.0
+          VI2 = 0.0
           DO 15 K = 1,3
               LK = LK + 1
               X4(K,L) = XCH(LK)
               XDOT4(K,L) = VCH(LK)
+              RI2 = RI2 + X4(K,L)**2
+              VI2 = VI2 + XDOT4(K,L)**2
    15     CONTINUE
+*       Save velocity & NAME of distant escaper for c.m. diagnostics.
+          IF (RI2.GT.RX2) THEN
+              RX2 = RI2
+              VX2 = VI2
+              NAMEX = NAMEC(L)
+          END IF
    20 CONTINUE
 *
 *       Quantize the elapsed interval since last step (note: none at TBLOCK).
@@ -180,7 +191,6 @@
       JLIST(12) = I6
 *
 *       Place new coordinates in the original locations.
-      VX2 = 0.0
       DO 40 L = 1,NCH
           J = JLIST(L)
 *       Compare global name & subsystem name to restore the mass & T0.
@@ -200,15 +210,11 @@
               X0DOT(K,J) = XDOT(K,J)
               VJ2 = VJ2 + XDOT(K,J)**2
    35     CONTINUE
-          IF (VJ2.GT.VX2) THEN
-              VX2 = VJ2
-              JX = J
-          END IF
    40 CONTINUE
 *
 *       Print diagnostics for high-velocity chain escaper after COLL or COAL.
       IF (ECH.GT.0.5*BODYM*16.0*ECLOSE) THEN
-          WRITE (6,41)  NAME(JX), NCH, ECH, SQRT(VX2)*VSTAR
+          WRITE (6,41)  NAMEX, NCH, ECH, SQRT(VX2)*VSTAR
    41     FORMAT (' CHAIN DISRUPT    NMX NCH ECH VX ',I7,I4,F8.4,F6.1)
       END IF
 *
@@ -382,6 +388,19 @@
 *       Perform KS regularization of dominant components (ICOMP < JCOMP).
       IF (JCOMP.LE.N) THEN
           CALL KSREG
+*       Produce diagnostics on ejection velocity of escaper > 2*VSTAR.
+          IF (SQRT(VX2)*VSTAR.GT.2.0*VSTAR) THEN
+              J1 = 2*NPAIRS - 1
+              J2 = J1 + 1
+              A1 = -0.5*BODY(NTOT)/H(NPAIRS)
+              PB = DAYS*A1*SQRT(ABS(A1)/BODY(NTOT))
+              VI2 = XDOT(1,NTOT)**2 + XDOT(2,NTOT)**2 + XDOT(3,NTOT)**2
+              VCM = SQRT(VI2)*VSTAR
+              WRITE (6,68)  NAME(J1), NAME(J2), BODY(J1)*SMU,
+     &                      BODY(J2)*SMU, VCM, A1, PB
+   68         FORMAT (' CHAIN BINARY    NM M1 M2 VCM A PB ',
+     &                                  2I7,2F6.1,F7.1,1P,2E10.2)
+          END IF
 *       Restore TIME in case modified by routine KSPERI.
           TIME = TIME0
 *       Include optional rectification by standard KS procedure.
@@ -466,7 +485,18 @@
           JCOMP = MAX(I3,I4)
           CALL KSREG
           TIME = TIME0
-*
+          IF (SQRT(VX2)*VSTAR.GT.2.0*VSTAR) THEN
+              J1 = 2*NPAIRS - 1
+              J2 = J1 + 1
+              A1 = -0.5*BODY(NTOT)/H(NPAIRS)
+              PB = DAYS*A1*SQRT(ABS(A1)/BODY(NTOT))
+              VI2 = XDOT(1,NTOT)**2 + XDOT(2,NTOT)**2 + XDOT(3,NTOT)**2
+              VCM = SQRT(VI2)*VSTAR
+              WRITE (6,88)  NAME(J1), NAME(J2), BODY(J1)*SMU,
+     &                      BODY(J2)*SMU, VCM, A1, PB
+   88         FORMAT (' CHAIN BINARY2   NM M1 M2 VCM A PB ',
+     &                                  2I7,2F6.1,F7.1,1P,2E10.2)
+          END IF
           IF (KZ(30).GT.1) THEN
               WRITE (6,90)  I3, I4, STEP(NTOT), STEPR(NTOT),
      &                      R(NPAIRS), H(NPAIRS), GAMMA(NPAIRS)

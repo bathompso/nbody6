@@ -30,8 +30,8 @@
       CHARACTER*5 CH5
       SAVE IWARN,IGR,IMB
       DATA IWARN,IGR,IMB /0,0,0/
-      LOGICAL FIRST
       SAVE FIRST
+      LOGICAL FIRST
       DATA FIRST /.TRUE./
 *
 *
@@ -385,10 +385,14 @@
             ENDIF
          ELSEIF(KSTAR(J2).LE.12)THEN
 *
-* Form a new giant envelope.
+* Form a new giant envelope (skip matrix test for preMS evolution).
 *
             DM2 = DM1
-            KST = KTYPE(KSTAR(J1),KSTAR(J2))
+            IF (MIN(KSTAR(J1),KSTAR(J2)).LT.0) THEN
+               KST = 0
+            ELSE
+               KST = KTYPE(KSTAR(J1),KSTAR(J2))
+            END IF
             IF(KST.GT.100) KST = KST - 100
             IF(KST.EQ.4)THEN
                AJ(2) = AJ(2)/TMS(2)
@@ -1287,9 +1291,10 @@
             ENDIF
 *
             IF(TTID.LT.MIN(TPHYS,10.D0))THEN
+               ITRO = 0
                DTM0 = MAX(DTM0,DTMMIN)
                DELET = DELET*DTM0
-               DJORB = DJGR*DTM0
+   81          DJORB = DJGR*DTM0
 * Include magnetic braking for both stars.
                DJSPIN(1) = DJMB*DTM0
                CALL MAGBRK(KSTAR(J2),MASS(2),MENV(2),RAD(2),OSPIN(2),
@@ -1323,6 +1328,15 @@
      &                      (K2STR(K)*RADX(K)*RADX(K)*(MASS(K)-MASSC(K))
      &                       + K3*RADC(K)*RADC(K)*MASSC(K))
                ENDDO
+* Impose 2.5 % limit on change of JORB (Chris Tout 1/2013).
+               IF (ABS(DJORB).GT.0.1*JORB.AND.ITRO.LE.5) THEN
+                   DTM0 = 0.1*JORB*DTM0/ABS(DJORB)
+                   DELET = 0.1*JORB*DELET/ABS(DJORB)
+                   ITRO = ITRO + 1
+                   IF (JORB.GT.0.0D0) WRITE (6,83)  DJORB/JORB, JORB
+   83              FORMAT (' ROCHE LIMIT    DJO/JORB JORB ',1P,2E10.2)
+                   GO TO 81
+               ENDIF
 * Adjust the eccentricity and orbital angular momentum.
                ECC = MAX(ECC - DELET,0.001D0)
                JORB = MAX(JORB - DJORB,0.D0)
@@ -1330,6 +1344,11 @@
                SEP = (MASS(1) + MASS(2))*JORB*JORB/
      &             ((MASS(1)*MASS(2)*TWOPI)**2*AURSUN**3*(1.D0-ECC*ECC))
                SEP = MAX(SEP,RAD(2))
+* Perform coalescence check after shrinkage.
+               IF (RAD(1)+RAD(2).LT.SEP)THEN
+                  COALS = .TRUE.
+                  GO TO 60
+               ENDIF
                DO K = 1,2
                   ROL(K) = RL(Q(K))*SEP
                ENDDO

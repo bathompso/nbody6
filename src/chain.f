@@ -118,6 +118,7 @@
       IPERT = 1
       ITER = 0
       IMCIRC = 0
+      IFAIL = 0
       NEXT = 0
       NDISS1 = 0
       JC = 0
@@ -310,6 +311,9 @@
           IF (STEP.LT.SMALL) STEP = SMALL
 *         WRITE (6,18)  NSTEP1, SMALL, STEP, (1.0/RINV(K),K=1,N-1)
 *  18     FORMAT (' STEP INCREASE    # SM S R ',I8,1P,2E9.1,2X,5E10.2)
+      ELSE
+*       Suppress ICALL after 10 unsuccessful attempts.
+          IF (IFAIL.GT.10) ICALL = 0
       END IF
 *
 *       Advance the solution one step.
@@ -539,6 +543,7 @@
 *
           IF (QPERI.LT.RCR) THEN
 *       Obtain global coordinates & velocities (ITERM < 0 denotes collision).
+              IFAIL = 0
               ITERM = -1
               ISUB = -ISUB
               CALL CHTERM(ISUB)
@@ -571,6 +576,7 @@
               GO TO 10
           ELSE IF (ICIRC.GT.0.AND.KZ27.GT.0.AND.ISYNC.EQ.0) THEN
 *       Modify regularized variables due to tidal dissipation.
+              EN0 = ENERGY
               CALL QPMOD(IM,ITERM)
 *
 *       Check reduction (ITERM = -2) or termination (ITERM = -1; N <= 4).
@@ -588,6 +594,10 @@
                   TIMEC = CHTIME
                   ECH = ENERGY
                   GO TO 70
+              END IF
+*       Suppress ICALL before integration after ten zero energy changes.
+              IF (ABS(ENERGY-EN0).EQ.0.0D0) THEN
+                  IFAIL = IFAIL + 1
               END IF
               GO TO 21
           ELSE
@@ -641,6 +651,8 @@
           END IF
 *       Avoid checking after switch (just in case).
           IF (ISW.LE.1) THEN
+*       Update RGRAV in case of compact initial size.
+              RGRAV = MIN(SUM/ABS(ENERGY),0.5*RSUM)
               CALL CHMOD(ISUB,KCASE)
               IF (KCASE.GT.0) THEN
                   CALL RECOIL(1)
@@ -677,7 +689,7 @@
       ELSE IF (N.EQ.4) THEN
           IF (RM.LT.0.1*RSUM) THEN
 *       Find largest separation to distinguish triple or quad case.
-              RX = 1.0
+              RX = 1.0D+10
               DO 65 K = 1,N-1
                   RX = MIN(RX,RINV(K))
    65         CONTINUE

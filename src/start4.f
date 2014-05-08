@@ -6,7 +6,7 @@
 *
       INCLUDE 'common6.h'
       REAL*8  M,MIJ
-      COMMON/CREG/  M(4),X4(3,4),XDOT4(3,4),P(12),Q(12),TIME4,ENERGY,
+      COMMON/CREG/  M(4),X4(12),XDOT4(12),P(12),Q(12),TIME4,ENERGY,
      &              EPSR2,XR(9),W(9),RR(6),TA(6),MIJ(6),CM(10),RMAX4,
      &              TMAX,DS,TSTEP,EPS,NSTEP4,NAME4(4),KZ15,KZ27,NREG,NFN
       COMMON/CONFIG/  R2(4,4),I1,I2,I3,I4
@@ -28,16 +28,18 @@
     2 CONTINUE
 *
 *       Transform to the local c.m. reference frame.
+      LK = 0
       DO 4 L = 1,4
           J = 2*NPAIRS + L
 *       Copy four-body system from the first single particle locations.
           M(L) = BODY(J)
           CM(7) = CM(7) + M(L)
           DO 3 K = 1,3
-              X4(K,L) = X(K,J)
-              XDOT4(K,L) = XDOT(K,J)
-              CM(K) = CM(K) + M(L)*X4(K,L)
-              CM(K+3) = CM(K+3) + M(L)*XDOT4(K,L)
+              LK = LK + 1
+              X4(LK) = X(K,J)
+              XDOT4(LK) = XDOT(K,J)
+              CM(K) = CM(K) + M(L)*X4(LK)
+              CM(K+3) = CM(K+3) + M(L)*XDOT4(LK)
     3     CONTINUE
     4 CONTINUE
 *
@@ -47,10 +49,12 @@
     5 CONTINUE
 *
 *       Specify initial conditions for chain regularization.
+      LK = 0
       DO 8 L = 1,4
           DO 7 K = 1,3
-              X4(K,L) = X4(K,L) - CM(K)
-              XDOT4(K,L) = XDOT4(K,L) - CM(K+3)
+              LK = LK + 1
+              X4(LK) = X4(LK) - CM(K)
+              XDOT4(LK) = XDOT4(LK) - CM(K+3)
     7     CONTINUE
     8 CONTINUE
 *
@@ -180,6 +184,7 @@
 *
 *       Place new coordinates in the original locations.
       JLIST(1) = I
+      LK = 0
       DO 120 L = 1,4
           J = JLIST(L)
 *       Compare global name & subsystem name to restore the mass.
@@ -190,7 +195,8 @@
   112     CONTINUE
           LL = JLIST(L+4)
           DO 115 K = 1,3
-              X(K,J) = X4(K,LL) + CM(K)
+              LK = LK + 1
+              X(K,J) = X4(LK) + CM(K)
   115     CONTINUE
   120 CONTINUE
 *
@@ -208,11 +214,13 @@
   122 CONTINUE
 *
 *       Transform to global velocities using corrected c.m. velocity.
+      LK = 0
       DO 130 L = 1,4
           J = JLIST(L)
           LL = JLIST(L+4)
           DO 125 K = 1,3
-              XDOT(K,J) = XDOT4(K,LL) + CM(K+3)
+              LK = LK + 1
+              XDOT(K,J) = XDOT4(LK) + CM(K+3)
               X0DOT(K,J) = XDOT(K,J)
   125     CONTINUE
   130 CONTINUE

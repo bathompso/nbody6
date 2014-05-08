@@ -26,7 +26,7 @@
 *
       NNB = LIST(1,I)
 *       Neglect F2DOT & F3DOT outside 5*RS unless high accuracy is needed.
-      RCRIT2 = 25.0*RS(I)**2*(1.0 + 1.0/FLOAT(NNB+1))
+      RCRIT2 = 25.0*RS(I)**2*(1.0 + 1.0/DFLOAT(NNB+1))
 *       Specify index of first neighbour to be identified.
       L = 2
       NAMEJ = LIST(L,I)

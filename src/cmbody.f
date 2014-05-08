@@ -31,7 +31,7 @@
 *
 *       Define discrete time for prediction & new polynomials (T <= TBLOCK).
           I = N + KSPAIR
-          DT = 0.1*STEP(I)
+          DT = MIN(TBLOCK-TPREV,DTMIN)
           IF (DT.GT.2.4E-11) THEN
               TIME2 = TIME - TPREV
               CALL STEPK(DT,DTN)
@@ -156,7 +156,14 @@
           IF (KZ(19).GE.3) THEN
               K1 = KSTAR(I1)
               K2 = KSTAR(I2)
-              ICASE = KTYPE(K1,K2)
+*       PreMS collision scheme: -1, -1 ==> -1; -1, 0 ==> -1; -1, x ==> x.
+              IF (K1.LT.0.OR.K2.LT.0) THEN
+                  ICASE = -1
+                  IF (MAX(K1,K2).EQ.0) ICASE = -1
+                  IF (MAX(K1,K2).GT.0) ICASE = MAX(K1,K2)
+              ELSE
+                  ICASE = KTYPE(K1,K2)
+              END IF
               IF(ICASE.GT.100)THEN
                   IQCOLL = 4
                   CALL EXPEL(I1,I2,ICASE)
@@ -300,7 +307,7 @@
           CM(K+3) = (BODY(I1)*XDOT(K,I1) + BODY(I2)*XDOT(K,I2))/ZM
    12 CONTINUE
 *
-*	Set T0 = TIME for correct potential energy correction in FCORR.
+*       Set T0 = TIME for correct potential energy correction in FCORR.
       IF (ICH.GT.0) THEN
           DO 14 L = 1,NCH
               J = JLIST(L)
@@ -360,7 +367,7 @@
       BODY(I1) = ZM
       BODY(I2) = 0.0D0
       SPIN(I1) = (SPIN(I1) + SPIN(I2))*(1.0 - DM/ZM)
-      T0(I2) = TADJ + DTADJ
+      T0(I2) = TADJ + DTADJ 
       IF (KZ(23).EQ.0.OR.RTIDE.GT.1000.0*RSCALE) T0(I2) = 1.0D+10
       DTMAX = DTK(1)
       CALL DTCHCK(TIME,DTMAX,DTK(40))
@@ -480,12 +487,13 @@
                   CALL FPOLY2(J,J,0)
    30         CONTINUE
           END IF
-          TPREV = TIME - STEPX
+*       Note danger of multiple collisions on same block-step (early times).
+*         TPREV = TIME - STEPX
       END IF
 *
 *       Check creation of ghost(s) after collision of two white dwarfs.
    32 IF (KSTAR(I1).EQ.15) THEN
-          T0(I1) = TADJ + DTADJ
+          T0(I1) = TADJ + DTADJ 
           STEP(I1) = DTMAX
           DO 35 K = 1,3
               X0(K,I1) = 1000.0*RSCALE*X(K,I1)/RI
@@ -595,7 +603,7 @@
 *
 *       Open the second coalescence unit #26 first time.
       IF (FIRST.AND.(IQCOLL.EQ.3.OR.KSTARI.GE.10)) THEN
-          OPEN (UNIT=88,STATUS='NEW',FORM='FORMATTED',FILE='COAL2')
+          OPEN (UNIT=26,STATUS='NEW',FORM='FORMATTED',FILE='COAL2')
           FIRST = .FALSE.
 *
 *       Print cluster scaling parameters at start of the run.
@@ -641,7 +649,7 @@
 *
 *       Reduce NSUB for chain (temporary increase by CHINIT before CHTERM).
   100 IF (ICH.GT.0) THEN
-          NSUB = NSUB - 1
+          NSUB = MAX(NSUB - 1,0)
       END IF
 *       Skip NSUB reduction for continuation of CHAIN (bug fix 26/8/06).
       TTOT = TIME + TOFF

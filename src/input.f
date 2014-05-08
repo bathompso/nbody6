@@ -69,8 +69,9 @@
       NBZERO = NNBMAX
       ZNBMIN = 0.2*FLOAT(NNBMAX)
       ZNBMAX = 0.9*FLOAT(NNBMAX)
-*       Save initial ETAI.
+*       Save initial ETAI and RMIN**2 (for PHICOR).
       ETA0 = ETAI
+      RMIN2 = RMIN**2
       RSMIN = RS0
       RC = RS0
 *       Temporary save of initial neighbour sphere for OUTPUT & NBLIST.

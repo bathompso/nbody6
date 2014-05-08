@@ -6,12 +6,16 @@
 *
       IMPLICIT REAL*8  (A-H,O-Z)
       INCLUDE 'params.h'
-      PARAMETER  (NA=84,NB=168,NC=530,ND=392+MLR+MLD+MLV,NE=24,NM=40,
+      PARAMETER  (NA=84,NB=168,NC=530,ND=392+MLR+MLD+MLV,NE=24,NM=60,
      &    NG=84+2*KMAX,NL=99,NO=20*MCL+16,NP=32*NTMAX,NQ=31*MMAX,
      &    NS=44*MMAX)
       REAL*4  A,B,C,D,E,G,L,M,O,P,Q,S
       INTEGER K,I,NTSAVE
 *
+      character*80 dname,ddir
+      integer ld,ldd,mk
+      common /fnm/ ld,ldd,dname,ddir
+
       COMMON/NAMES/  NTOT,NPAIRS,NTTOT,A(NA)
       COMMON/COUNTS/ B(NB)
       COMMON/PARAMS/ C(NC)
@@ -43,7 +47,17 @@
      &               FP0(4,KMAX),FD0(4,KMAX),TBLIST,DTB,KBLIST(KMAX),
      &               KSLOW(KMAX),NAME(NMAX),LIST(LMAX,NMAX)
 *
+*
 *       Open unit #J by reading dummy and rewinding.
+      if (j.eq.1) then
+         open(j,file=ddir(1:ldd)//dname(1:ld)//'.RSTART',
+     *        form='unformatted')
+      else
+         open(j,file=ddir(1:ldd)//dname(1:ld)//'.RSTART2',
+     *        form='unformatted')
+      end if
+
+
       REWIND J
       READ (J,ERR=10,END=10)  DUMMY
    10 REWIND J

@@ -6,7 +6,7 @@
 *
       INCLUDE 'common6.h'
       REAL*8 TSCLS(20),LUMS(10),GB(10),TM,TN
-      REAL*8 M0,M1,RM,LUM,AGE,MC,RCC
+      REAL*8 M0,M1,RM,LUM,AGE,MC,RCC,SM
       REAL*8 MENV,RENV,K2,K3
       PARAMETER(K3=0.21D0)
       REAL*8 JSPIN,OSPIN
@@ -80,23 +80,52 @@
       EPOCH1 = EPOCH0
       DO 10 I = 1,N
 *
-*       Obtain stellar parameters at current epoch (option #12 12/2/11).
+*       Obtain stellar parameters at current epoch.
           IF(KZ(12).EQ.2)THEN
-             READ(12,*)M1,KW,M0,EPOCH1,OSPIN
+*			  Old Stuff -------------
+*             READ(12,*)M1,KW,M0,EPOCH1,OSPIN
+*             EPOCH1 = EPOCH1-EPOCH0
+
+*			  New Stuff -------------
+			  READ(12,*)M1
+			  M0 = M1
+			  IF(KSTAR(I).GT.1)THEN
+                KW = KSTAR(I)
+              ELSE
+*       Include optional pre-mainsequence evolution.
+                IF (M1.LT.8.0.AND.KZ(41).GT.0) THEN
+                    KW = -1
+                ELSE
+                    KW = 1
+                END IF
+                IF (KZ(45).GT.0.AND.M0.GT.10.0.AND.I.LE.KZ(24)) KW = 14
+             ENDIF
           ELSE
              M1 = BODY(I)*ZMBAR
+             WRITE(6,*) BODY(I)
              M0 = M1
              IF(KSTAR(I).GT.1)THEN
                 KW = KSTAR(I)
              ELSE
-                KW = 1
+*       Include optional pre-mainsequence evolution.
+                IF (M1.LT.8.0.AND.KZ(41).GT.0) THEN
+                    KW = -1
+                ELSE
+                    KW = 1
+                END IF
 *               IF(M0.LE.0.01D0) KW = 10
 *               IF(M0.GE.100.D0) KW = 14
+                IF (KZ(45).GT.0.AND.M0.GT.10.0.AND.I.LE.KZ(24)) KW = 14
              ENDIF
           ENDIF
           MC = 0.D0
           AGE = TIME*TSTAR - EPOCH1
           CALL star(KW,M0,M1,TM,TN,TSCLS,LUMS,GB,ZPARS)
+*       Define preMS EPOCH & AGE if relevant.
+          IF (KW.EQ.-1) THEN
+              EPOCH(I) = TSCLS(15)
+              AGE = TIME*TSTAR - EPOCH(I)
+          END IF
           CALL hrdiag(M0,AGE,M1,TM,TN,TSCLS,LUMS,GB,ZPARS,
      &                RM,LUM,KW,MC,RCC,MENV,RENV,K2)
 *
@@ -120,6 +149,7 @@
               SPIN(I) = JSPIN/SPNFAC
           END IF
 *
+*       Check neutron star option for GR capture (avoid large masses).
           IF (KZ(27).EQ.3.AND.KZ(28).EQ.4) THEN
               RADIUS(I) = 1.0D-12/(3.0*RBAR)
               KW = 13
@@ -148,6 +178,11 @@
           IF (TEV(I).LT.TMDOT) THEN
               TMDOT = TEV(I)
           END IF
+          IF (I.EQ.1.AND.KZ(41).GT.0) THEN
+              WRITE (6,8)  M1, TEV(I), RADIUS(I)*SU
+    8         FORMAT (/,12X,'BEGIN STAR #1    M TEV r*  ',
+     &                       F7.2,1P,2E10.2)
+          END IF
 *
    10 CONTINUE
 *
@@ -171,13 +206,13 @@
 *       Initialize stellar collision matrix.
 *
       ktype(0,0) = 1
-      do 20 , j = 1,6
+      do 20 j = 1,6
          ktype(0,j) = j
          ktype(1,j) = j
  20   continue
       ktype(0,7) = 4
       ktype(1,7) = 4
-      do 25 , j = 8,12
+      do 25 j = 8,12
          if(j.ne.10)then
             ktype(0,j) = 6
          else
@@ -186,7 +221,7 @@
          ktype(1,j) = ktype(0,j)
  25   continue
       ktype(2,2) = 3
-      do 30 , i = 3,14
+      do 30 i = 3,14
          ktype(i,i) = i
  30   continue
       ktype(5,5) = 4
@@ -195,7 +230,7 @@
 *       Change for CO+CO owing to Tout theory (21/11/08).
       ktype(11,11) = 12
       ktype(13,13) = 14
-      do 35 , i = 2,5
+      do 35 i = 2,5
          do 40 j = i+1,12
             ktype(i,j) = 4
  40      continue
@@ -230,15 +265,15 @@
       ktype(10,11) = 9
       ktype(10,12) = 9
       ktype(11,12) = 12
-      do 45 , i = 0,12
+      do 45 i = 0,12
          ktype(i,13) = 13
          ktype(i,14) = 14
  45   continue
       ktype(13,14) = 14
 *
-* Increase common-envelope cases by 100.
-      do 50 , i = 0,9
-         do 55 , j = i,14
+*       Increase common-envelope cases by 100.
+      do 50 i = 0,9
+         do 55 j = i,14
             if(i.le.1.or.i.eq.7)then
                if(j.ge.2.and.j.le.9.and.j.ne.7)then
                   ktype(i,j) = ktype(i,j) + 100
@@ -250,8 +285,8 @@
  50   continue
 *
 *       Assign the remaining values by symmetry.
-      do 60 , i = 1,14
-         do 65 , j = 0,i-1
+      do 60 i = 1,14
+         do 65 j = 0,i-1
             ktype(i,j) = ktype(j,i)
  65      continue
  60   continue
